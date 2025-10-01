@@ -8,6 +8,13 @@ import { createTokenPair } from '@/services/tokenService';
 import { storeRefreshToken, validateRefreshToken, rotateRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens } from '@/services/refreshTokenService';
 import { generateRefreshToken } from '@/services/tokenService';
 import type { LoginRequest, RefreshRequest, RegisterRequest } from '@/types';
+import { 
+  loginRateLimit, 
+  refreshRateLimit, 
+  registrationRateLimit,
+  bruteForceProtection,
+  recordLoginAttempt 
+} from '@/middleware/rateLimiting';
 
 const router = Router();
 
@@ -33,7 +40,9 @@ const registerSchema = z.object({
  * POST /v1/auth/login
  * Authenticate user and return access + refresh tokens
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimit, bruteForceProtection, async (req, res) => {
+  let loginSuccess = false;
+  
   try {
     const { email, password, tenantId } = loginSchema.parse(req.body);
 
@@ -49,6 +58,9 @@ router.post('/login', async (req, res) => {
       );
 
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
+      // Record failed attempt
+      recordLoginAttempt(false)(req, res, () => {});
+      
       return res.status(401).json({
         error: 'invalid_credentials',
         message: 'Invalid email or password',
@@ -61,8 +73,17 @@ router.post('/login', async (req, res) => {
     // Store refresh token
     await storeRefreshToken(tokenPair.refreshToken, user.id, user.tenantId);
 
+    // Record successful login
+    loginSuccess = true;
+    recordLoginAttempt(true)(req, res, () => {});
+
     res.json(tokenPair);
   } catch (error) {
+    // Record failed attempt if we haven't already
+    if (!loginSuccess) {
+      recordLoginAttempt(false)(req, res, () => {});
+    }
+    
     if (error instanceof z.ZodError) {
       return res.status(400).json({
         error: 'validation_error',
@@ -83,7 +104,7 @@ router.post('/login', async (req, res) => {
  * POST /v1/auth/refresh
  * Refresh access token using refresh token
  */
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', refreshRateLimit, async (req, res) => {
   try {
     const { refreshToken } = refreshSchema.parse(req.body);
 
@@ -213,7 +234,7 @@ router.post('/logout-all', async (req, res) => {
  * POST /v1/auth/register
  * Register a new user (first-party only)
  */
-router.post('/register', async (req, res) => {
+router.post('/register', registrationRateLimit, async (req, res) => {
   try {
     const { email, password, tenantId, role } = registerSchema.parse(req.body);
 

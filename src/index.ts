@@ -5,6 +5,7 @@ import { config } from './config';
 import authRoutes from './routes/auth';
 import wellKnownRoutes from './routes/wellKnown';
 import { initializeKeyManagement } from './services/keyService';
+import { generalRateLimit } from './middleware/rateLimiting';
 
 const app = express();
 
@@ -14,6 +15,9 @@ app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
   credentials: true,
 }));
+
+// General rate limiting for all routes
+app.use(generalRateLimit);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));

@@ -30,7 +30,7 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.30.4",
     "express": "^5.1.0",
-    "express-rate-limit": "^7.1.5",
+    "express-rate-limit": "^7.5.1",
     "helmet": "^7.1.0",
     "jose": "^5.2.0",
     "node-fetch": "^2.7.0",
