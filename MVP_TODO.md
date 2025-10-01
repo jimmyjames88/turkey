@@ -57,10 +57,10 @@ Building a reusable JWT authentication API with short-lived access tokens (RS256
   - [x] Cache optimization
 
 ### Phase 4: Security & Middleware
-- [ ] Rate limiting:
-  - [ ] Separate limits for /login and /refresh
-  - [ ] Brute force protection
-  - [ ] Account lockout mechanism
+- [x] Rate limiting:
+  - [x] Separate limits for /login and /refresh
+  - [x] Brute force protection
+  - [x] Account lockout mechanism
 - [ ] Authentication middleware:
   - [ ] Bearer token parsing
   - [ ] JWKS caching and validation
