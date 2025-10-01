@@ -61,6 +61,7 @@ export interface JWTPayload {
   iat: number;
   nbf: number;
   exp: number;
+  [key: string]: any; // Allow additional claims
 }
 
 export interface TokenPair {

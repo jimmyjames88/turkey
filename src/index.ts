@@ -2,6 +2,9 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { config } from './config';
+import authRoutes from './routes/auth';
+import wellKnownRoutes from './routes/wellKnown';
+import { initializeKeyManagement } from './services/keyService';
 
 const app = express();
 
@@ -25,9 +28,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Routes will be added here
-// app.use('/v1/auth', authRoutes);
-// app.use('/.well-known', wellKnownRoutes);
+// Routes
+app.use('/v1/auth', authRoutes);
+app.use('/.well-known', wellKnownRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -45,9 +48,21 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 
 const PORT = config.port;
 
-app.listen(PORT, () => {
-  console.log(`🦃 TurKey Auth API running on port ${PORT}`);
-  console.log(`Environment: ${config.nodeEnv}`);
-});
+// Initialize key management
+async function startServer() {
+  try {
+    await initializeKeyManagement();
+    
+    app.listen(PORT, () => {
+      console.log(`🦃 TurKey Auth API running on port ${PORT}`);
+      console.log(`Environment: ${config.nodeEnv}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 export default app;

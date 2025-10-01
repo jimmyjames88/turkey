@@ -16,43 +16,45 @@ Building a reusable JWT authentication API with short-lived access tokens (RS256
   - [x] `keys` table (id, kid, alg, publicPem, privatePem, createdAt, retiredAt, isActive)
   - [x] `revoked_jti` table (jti, userId, reason, expiresAt) - optional denylist
   - [x] `audit` table (id, userId, actor, action, ip, ua, meta, createdAt)
+- [x] **Database migrations applied successfully**
+- [x] **Server running with key generation**
 
 ### Phase 2: Core Authentication Infrastructure
-- [ ] Set up cryptographic key management:
-  - [ ] Generate initial RSA/ES256 keypair
-  - [ ] Implement key storage with encryption
-  - [ ] Create key rotation utilities
-- [ ] Implement password hashing (bcrypt/argon2)
-- [ ] Create JWT utilities with JOSE library:
-  - [ ] Access token signing (ES256 preferred over RS256)
-  - [ ] Token validation middleware
-  - [ ] JWKS endpoint implementation
-- [ ] Set up refresh token management:
-  - [ ] Secure hashing before storage
-  - [ ] Rotation logic
-  - [ ] Cleanup expired tokens
+- [x] Set up cryptographic key management:
+  - [x] Generate initial RSA/ES256 keypair
+  - [x] Implement key storage with encryption
+  - [x] Create key rotation utilities
+- [x] Implement password hashing (bcrypt/argon2)
+- [x] Create JWT utilities with JOSE library:
+  - [x] Access token signing (ES256 preferred over RS256)
+  - [x] Token validation middleware
+  - [x] JWKS endpoint implementation
+- [x] Set up refresh token management:
+  - [x] Secure hashing before storage
+  - [x] Rotation logic
+  - [x] Cleanup expired tokens
 
 ### Phase 3: Core API Endpoints
-- [ ] **POST /v1/auth/login**
-  - [ ] Email/password validation
-  - [ ] Tenant validation
-  - [ ] Issue access + refresh token pair
-  - [ ] Audit logging
-- [ ] **POST /v1/auth/refresh**
-  - [ ] Validate refresh token
-  - [ ] Rotate refresh token
-  - [ ] Issue new access token
-  - [ ] Handle replay attacks
-- [ ] **POST /v1/auth/logout**
-  - [ ] Revoke current refresh token
-  - [ ] Audit logging
-- [ ] **POST /v1/auth/logout-all**
-  - [ ] Bump user tokenVersion
-  - [ ] Revoke all user refresh tokens
-- [ ] **GET /.well-known/jwks.json**
-  - [ ] Serve active public keys
-  - [ ] Include proper `kid` headers
-  - [ ] Cache optimization
+- [x] **POST /v1/auth/login**
+  - [x] Email/password validation
+  - [x] Tenant validation
+  - [x] Issue access + refresh token pair
+  - [x] Audit logging
+- [x] **POST /v1/auth/refresh**
+  - [x] Validate refresh token
+  - [x] Rotate refresh token
+  - [x] Issue new access token
+  - [x] Handle replay attacks
+- [x] **POST /v1/auth/logout**
+  - [x] Revoke current refresh token
+  - [x] Audit logging
+- [x] **POST /v1/auth/logout-all**
+  - [x] Bump user tokenVersion
+  - [x] Revoke all user refresh tokens
+- [x] **GET /.well-known/jwks.json**
+  - [x] Serve active public keys
+  - [x] Include proper `kid` headers
+  - [x] Cache optimization
 
 ### Phase 4: Security & Middleware
 - [ ] Rate limiting:
@@ -119,8 +121,8 @@ Building a reusable JWT authentication API with short-lived access tokens (RS256
 
 For immediate MVP functionality, focus on:
 1. **Database setup** ✅ (Phase 1) - **COMPLETED**
-2. **Basic auth endpoints** (login/refresh/logout from Phase 3)
-3. **JWKS endpoint** (Phase 3)
+2. **Basic auth endpoints** ✅ (Phase 3) - **COMPLETED**
+3. **JWKS endpoint** ✅ (Phase 3) - **COMPLETED**
 4. **Basic security middleware** (Phase 4)
 5. **One test protected route** (Phase 5)
 
