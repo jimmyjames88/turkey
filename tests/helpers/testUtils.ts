@@ -66,19 +66,25 @@ export function logTestResult(result: TestResult): void {
 }
 
 export function generateTestUser(suffix: string = '') {
+  const timestamp = Date.now();
+  const uniqueSuffix = suffix ? `${suffix}_${timestamp}` : timestamp.toString();
+  
   return {
-    email: `test${suffix}@example.com`,
+    email: `test${uniqueSuffix}@example.com`,
     password: 'SecurePass123!',
-    tenantId: `tenant_${suffix || '001'}`,
+    tenantId: `tenant_${suffix || '001'}_${timestamp}`,
     role: 'user'
   };
 }
 
 export function generateAdminUser(suffix: string = '') {
+  const timestamp = Date.now();
+  const uniqueSuffix = suffix ? `${suffix}_${timestamp}` : timestamp.toString();
+  
   return {
-    email: `admin${suffix}@example.com`,
+    email: `admin${uniqueSuffix}@example.com`,
     password: 'AdminSecure123!',
-    tenantId: `tenant_${suffix || '001'}`,
+    tenantId: `tenant_${suffix || '001'}_${timestamp}`,
     role: 'admin'
   };
 }

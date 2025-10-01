@@ -34,6 +34,7 @@ export async function createAccessToken(user: User, scope = ''): Promise<string>
     iss: config.jwtIssuer,
     aud: config.jwtAudience,
     sub: user.id,
+    email: user.email, // Add email to payload
     tenantId: user.tenantId,
     role: user.role,
     scope: scope || '',

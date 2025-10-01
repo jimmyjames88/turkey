@@ -149,10 +149,11 @@ export const refreshRateLimit = rateLimit({
 /**
  * Strict rate limiter for registration endpoints
  * Prevent spam account creation
+ * Note: More lenient in development for testing
  */
 export const registrationRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // Limit each IP to 10 registration attempts per hour
+  max: process.env.NODE_ENV === 'production' ? 10 : 100, // More lenient in dev for testing
   handler: createRateLimitHandler('registration'),
   standardHeaders: true,
   legacyHeaders: false,

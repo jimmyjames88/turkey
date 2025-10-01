@@ -2,6 +2,7 @@ import { testBasicEndpoints } from './api/basicEndpoints.test';
 import { testEdgeCases } from './api/edgeCases.test';
 import { testAdvancedFlow } from './api/advancedFlow.test';
 import { testRateLimiting } from './api/rateLimiting.test';
+import { testAuthenticationMiddleware } from './api/authMiddleware.test';
 
 /**
  * Main test runner for all integration tests
@@ -15,15 +16,23 @@ async function runAllIntegrationTests() {
     basicEndpoints: { total: 0, passed: 0, failed: 0 },
     edgeCases: { total: 0, passed: 0, failed: 0, expectedFailures: 0, testsRun: 0 },
     advancedFlow: { total: 0, passed: 0, failed: 0, expectedFailures: 0 },
-    rateLimiting: { total: 0, passed: 0, failed: 0, testsRun: 0 }
+    rateLimiting: { total: 0, passed: 0, failed: 0, testsRun: 0 },
+    authMiddleware: { total: 0, passed: 0, failed: 0, testsRun: 0 }
   };
 
   try {
+    // Add small delay to ensure server is ready
+    console.log('⏳ Waiting for server to be ready...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     // Run basic endpoints tests
     console.log('📋 SUITE 1: Basic Endpoints');
     console.log('----------------------------');
     results.basicEndpoints = await testBasicEndpoints();
     console.log('\n');
+
+    // Small delay between suites to avoid rate limiting conflicts
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Run edge cases tests
     console.log('🚨 SUITE 2: Edge Cases & Error Handling');
@@ -31,11 +40,17 @@ async function runAllIntegrationTests() {
     results.edgeCases = await testEdgeCases();
     console.log('\n');
 
+    // Small delay between suites
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // Run advanced flow tests
     console.log('🚀 SUITE 3: Advanced Authentication Flows');
     console.log('------------------------------------------');
     results.advancedFlow = await testAdvancedFlow();
     console.log('\n');
+
+    // Small delay between suites
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Run rate limiting tests
     console.log('🛡️  SUITE 4: Rate Limiting & Security');
@@ -43,13 +58,22 @@ async function runAllIntegrationTests() {
     results.rateLimiting = await testRateLimiting();
     console.log('\n');
 
+    // Small delay between suites
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Run authentication middleware tests
+    console.log('🔐 SUITE 5: Authentication Middleware');
+    console.log('------------------------------------');
+    results.authMiddleware = await testAuthenticationMiddleware();
+    console.log('\n');
+
     // Print summary
     console.log('📊 INTEGRATION TEST SUMMARY');
     console.log('============================');
     
-    const totalTests = results.basicEndpoints.total + results.edgeCases.total + results.advancedFlow.total + results.rateLimiting.total;
-    const totalPassed = results.basicEndpoints.passed + results.edgeCases.passed + results.advancedFlow.passed + results.rateLimiting.passed;
-    const totalFailed = results.basicEndpoints.failed + results.edgeCases.failed + results.advancedFlow.failed + results.rateLimiting.failed;
+    const totalTests = results.basicEndpoints.total + results.edgeCases.total + results.advancedFlow.total + results.rateLimiting.total + results.authMiddleware.total;
+    const totalPassed = results.basicEndpoints.passed + results.edgeCases.passed + results.advancedFlow.passed + results.rateLimiting.passed + results.authMiddleware.passed;
+    const totalFailed = results.basicEndpoints.failed + results.edgeCases.failed + results.advancedFlow.failed + results.rateLimiting.failed + results.authMiddleware.failed;
     const totalExpectedFailures = results.edgeCases.expectedFailures + results.advancedFlow.expectedFailures;
 
     console.log(`✅ Total Tests: ${totalTests}`);
@@ -57,6 +81,7 @@ async function runAllIntegrationTests() {
     console.log(`❌ Failed: ${totalFailed}`);
     console.log(`🎯 Expected Failures: ${totalExpectedFailures} (security validations working correctly)`);
     console.log(`🛡️  Rate Limiting Tests: ${results.rateLimiting.passed}/${results.rateLimiting.total} passed`);
+    console.log(`🔐 Auth Middleware Tests: ${results.authMiddleware.passed}/${results.authMiddleware.total} passed`);
     console.log(`📈 Success Rate: ${((totalPassed / totalTests) * 100).toFixed(1)}%`);
 
     if (totalFailed === 0) {

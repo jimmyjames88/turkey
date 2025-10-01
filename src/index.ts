@@ -4,6 +4,7 @@ import cors from 'cors';
 import { config } from './config';
 import authRoutes from './routes/auth';
 import wellKnownRoutes from './routes/wellKnown';
+import userRoutes from './routes/users';
 import { initializeKeyManagement } from './services/keyService';
 import { generalRateLimit } from './middleware/rateLimiting';
 
@@ -34,6 +35,7 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/v1/auth', authRoutes);
+app.use('/v1/users', userRoutes);
 app.use('/.well-known', wellKnownRoutes);
 
 // 404 handler

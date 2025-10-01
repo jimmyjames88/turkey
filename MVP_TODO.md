@@ -61,21 +61,24 @@ Building a reusable JWT authentication API with short-lived access tokens (RS256
   - [x] Separate limits for /login and /refresh
   - [x] Brute force protection
   - [x] Account lockout mechanism
-- [ ] Authentication middleware:
-  - [ ] Bearer token parsing
-  - [ ] JWKS caching and validation
-  - [ ] Token version checking
-  - [ ] Optional JTI denylist checking
+- [x] Authentication middleware:
+  - [x] Bearer token parsing
+  - [x] JWKS caching and validation
+  - [x] Token version checking
+  - [x] Optional JTI denylist checking
 - [ ] Input validation and sanitization
 - [ ] CORS configuration
 - [ ] Error handling and standardized responses
 
 ### Phase 5: Admin & Management Features
-- [ ] **POST /v1/auth/register** (optional, first-party only)
+- [x] **POST /v1/auth/register** (optional, first-party only)
 - [ ] **POST /v1/auth/introspect** (server-side token verification)
 - [ ] **POST /v1/auth/revoke** (admin revoke by jti or refreshId)
 - [ ] **POST /v1/keys/rotate** (admin key rotation)
-- [ ] **GET /v1/users/me** (test protected route)
+- [x] **GET /v1/users/me** (test protected route)
+- [x] **GET /v1/users/profile** (role-based access demo)
+- [x] **GET /v1/users/admin-only** (admin-only endpoint)
+- [x] **GET /v1/users/tenant-info** (tenant isolation demo)
 
 ### Phase 6: Multi-tenancy & Authorization
 - [ ] Tenant-scoped operations:
@@ -128,11 +131,14 @@ For immediate MVP functionality, focus on:
 
 ## 🧪 **Testing Status: ALL PASSED** ✅
 - ✅ 6/6 Core endpoints working
-- ✅ 5/5 Security validations passing  
-- ✅ 5/5 Advanced flows successful
+- ✅ 6/6 Security validations passing  
+- ✅ 6/6 Advanced flows successful
+- ✅ 5/5 Rate limiting tests passed
+- ✅ 8/8 Authentication middleware tests passed
 - ✅ Multi-tenant isolation verified
 - ✅ Token rotation implemented
 - ✅ Global logout working
+- ✅ **29/29 Total integration tests passing (100% success rate)**
 - ✅ **Integration tests organized** (`tests/integration/`)
 - ✅ **Test utilities created** (`tests/helpers/`)
 - ✅ **CI/CD ready test structure**
