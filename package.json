@@ -17,9 +17,14 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:integration": "ts-node tests/integration/index.ts",
+    "test:integration:basic": "ts-node tests/integration/basicEndpoints.test.ts",
+    "test:integration:edge": "ts-node tests/integration/edgeCases.test.ts",
+    "test:integration:advanced": "ts-node tests/integration/advancedFlow.test.ts",
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@types/node-fetch": "^2.6.13",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -28,6 +33,7 @@
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "jose": "^5.2.0",
+    "node-fetch": "^2.7.0",
     "pg": "^8.16.3",
     "postgres": "^3.4.3",
     "zod": "^3.22.4"
