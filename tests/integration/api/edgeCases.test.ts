@@ -27,11 +27,19 @@ async function testEdgeCases() {
 
   // Test 2: Duplicate user registration - SHOULD FAIL with 409
   console.log('Testing duplicate user prevention...');
-  const duplicateResult = await testEndpoint('/v1/auth/register', 'POST', {
-    email: 'testbasic@example.com', // Same email as basic test
-    password: 'AnotherSecure123!',
-    tenantId: 'tenant_basic'
-  });
+  
+  // First, create a user
+  const testUser = {
+    email: 'duplicate-test@example.com',
+    password: 'SecurePass123!',
+    tenantId: 'tenant_duplicate_test',
+    role: 'user'
+  };
+  
+  const firstResult = await testEndpoint('/v1/auth/register', 'POST', testUser);
+  
+  // Then try to create the same user again
+  const duplicateResult = await testEndpoint('/v1/auth/register', 'POST', testUser);
   
   const duplicateSuccess = duplicateResult.status === 409;
   console.log(`${duplicateSuccess ? '✅' : '❌'} POST /v1/auth/register - ${duplicateResult.status} (Expected: 409)`);
