@@ -9,7 +9,7 @@ async function runMigrations() {
     console.log('Database URL:', config.databaseUrl.replace(/\/\/.*@/, '//***:***@')); // Log with hidden credentials
     
     await migrate(db, { 
-      migrationsFolder: path.join(__dirname, 'migrations') 
+      migrationsFolder: path.join(process.cwd(), 'migrations') 
     });
     
     console.log('✅ Database migrations completed successfully!');

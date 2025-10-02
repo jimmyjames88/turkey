@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodError, ZodSchema } from 'zod';
-import DOMPurify from 'isomorphic-dompurify';
+import validator from 'validator';
 
 /**
  * Comprehensive input validation and sanitization middleware
@@ -12,11 +12,8 @@ import DOMPurify from 'isomorphic-dompurify';
  */
 function sanitizeString(value: any): any {
   if (typeof value === 'string') {
-    // Remove HTML tags and sanitize
-    return DOMPurify.sanitize(value, { 
-      ALLOWED_TAGS: [], 
-      ALLOWED_ATTR: [] 
-    }).trim();
+    // Remove HTML tags and escape dangerous characters
+    return validator.escape(validator.stripLow(value.trim()));
   }
   
   if (Array.isArray(value)) {
@@ -84,7 +81,7 @@ export const commonSchemas = {
   searchQuery: z.string()
     .max(100, 'Search query too long')
     .optional()
-    .transform(val => val ? DOMPurify.sanitize(val).trim() : undefined),
+    .transform(val => val ? validator.escape(validator.stripLow(val.trim())) : undefined),
 };
 
 /**

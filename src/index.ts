@@ -2,12 +2,14 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { Server } from 'http';
+import path from 'path';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { config } from './config';
 import authRoutes from './routes/auth';
 import wellKnownRoutes from './routes/wellKnown';
 import userRoutes from './routes/users';
 import { initializeKeyManagement } from './services/keyService';
-import { testDatabaseConnection, closeDatabaseConnection } from './db';
+import { testDatabaseConnection, closeDatabaseConnection, db } from './db';
 import { generalRateLimit } from './middleware/rateLimiting';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandling';
 import { validateContentType, validateRequestSize } from './middleware/validation';
@@ -67,6 +69,14 @@ async function startServer() {
     // Test database connection first
     logger.info('Testing database connection...');
     await testDatabaseConnection();
+    
+    // Run database migrations
+    logger.info('Running database migrations...');
+    const migrationsPath = path.join(process.cwd(), 'migrations');
+    await migrate(db, { 
+      migrationsFolder: migrationsPath
+    });
+    logger.info('Database migrations completed successfully!');
     
     // Initialize key management
     logger.info('Initializing key management...');

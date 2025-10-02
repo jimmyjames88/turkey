@@ -61,8 +61,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
 
-# Copy any other necessary files
-COPY --from=builder /app/drizzle ./drizzle
+# Copy migration files for database setup
+COPY --from=builder /app/migrations ./migrations
+
+# Create production tsconfig.json with correct paths
+RUN echo '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["./dist/*"]}}}' > ./tsconfig.json
 
 # Change ownership to turkey user
 RUN chown -R turkey:turkey /app
@@ -76,4 +79,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Production command
-CMD ["node", "dist/index.js"]
+CMD ["node", "-r", "tsconfig-paths/register", "dist/index.js"]
