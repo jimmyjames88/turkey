@@ -7,6 +7,8 @@ import wellKnownRoutes from './routes/wellKnown';
 import userRoutes from './routes/users';
 import { initializeKeyManagement } from './services/keyService';
 import { generalRateLimit } from './middleware/rateLimiting';
+import { globalErrorHandler, notFoundHandler } from './middleware/errorHandling';
+import { validateContentType, validateRequestSize } from './middleware/validation';
 
 const app = express();
 
@@ -19,6 +21,10 @@ app.use(cors({
 
 // General rate limiting for all routes
 app.use(generalRateLimit);
+
+// Request validation middleware
+app.use(validateContentType);
+app.use(validateRequestSize()); // Note: calling as function to get middleware
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -39,18 +45,10 @@ app.use('/v1/users', userRoutes);
 app.use('/.well-known', wellKnownRoutes);
 
 // 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'not_found', message: 'Route not found' });
-});
+app.use(notFoundHandler);
 
-// Error handler
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ 
-    error: 'internal_server_error', 
-    message: 'Something went wrong' 
-  });
-});
+// Global error handler
+app.use(globalErrorHandler);
 
 const PORT = config.port;
 

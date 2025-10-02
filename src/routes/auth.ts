@@ -15,36 +15,41 @@ import {
   bruteForceProtection,
   recordLoginAttempt 
 } from '@/middleware/rateLimiting';
+import { validateRequest, commonSchemas } from '@/middleware/validation';
+import { errorHelpers, asyncHandler } from '@/middleware/errorHandling';
 
 const router = Router();
 
 // Validation schemas
 const loginSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  password: z.string().min(1, 'Password is required'),
-  tenantId: z.string().min(1, 'Tenant ID is required'),
+  email: commonSchemas.email,
+  password: commonSchemas.password.min(1, 'Password is required'),
+  tenantId: commonSchemas.tenantId,
 });
 
 const refreshSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
+  refreshToken: commonSchemas.jwtToken,
 });
 
 const registerSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  tenantId: z.string().min(1, 'Tenant ID is required'),
-  role: z.string().optional().default('user'),
+  email: commonSchemas.email,
+  password: commonSchemas.password,
+  tenantId: commonSchemas.tenantId,
+  role: commonSchemas.role,
 });
 
 /**
  * POST /v1/auth/login
  * Authenticate user and return access + refresh tokens
  */
-router.post('/login', loginRateLimit, bruteForceProtection, async (req, res) => {
-  let loginSuccess = false;
-  
-  try {
-    const { email, password, tenantId } = loginSchema.parse(req.body);
+router.post('/login', 
+  loginRateLimit, 
+  bruteForceProtection, 
+  validateRequest(loginSchema),
+  asyncHandler(async (req, res) => {
+    let loginSuccess = false;
+    
+    const { email, password, tenantId } = req.body;
 
     // Find user
     const [user] = await db
@@ -60,11 +65,7 @@ router.post('/login', loginRateLimit, bruteForceProtection, async (req, res) => 
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
       // Record failed attempt
       recordLoginAttempt(false)(req, res, () => {});
-      
-      return res.status(401).json({
-        error: 'invalid_credentials',
-        message: 'Invalid email or password',
-      });
+      throw errorHelpers.invalidCredentials();
     }
 
     // Create token pair
@@ -78,43 +79,23 @@ router.post('/login', loginRateLimit, bruteForceProtection, async (req, res) => 
     recordLoginAttempt(true)(req, res, () => {});
 
     res.json(tokenPair);
-  } catch (error) {
-    // Record failed attempt if we haven't already
-    if (!loginSuccess) {
-      recordLoginAttempt(false)(req, res, () => {});
-    }
-    
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        error: 'validation_error',
-        message: 'Invalid request data',
-        details: error.errors,
-      });
-    }
-
-    console.error('Login error:', error);
-    res.status(500).json({
-      error: 'internal_server_error',
-      message: 'Login failed',
-    });
-  }
-});
+  })
+);
 
 /**
  * POST /v1/auth/refresh
  * Refresh access token using refresh token
  */
-router.post('/refresh', refreshRateLimit, async (req, res) => {
-  try {
-    const { refreshToken } = refreshSchema.parse(req.body);
+router.post('/refresh', 
+  refreshRateLimit,
+  validateRequest(refreshSchema),
+  asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body;
 
     // Validate refresh token
     const storedToken = await validateRefreshToken(refreshToken);
     if (!storedToken) {
-      return res.status(401).json({
-        error: 'invalid_grant',
-        message: 'Invalid or expired refresh token',
-      });
+      throw errorHelpers.invalidGrant();
     }
 
     // Get user
@@ -124,10 +105,7 @@ router.post('/refresh', refreshRateLimit, async (req, res) => {
       .where(eq(users.id, storedToken.userId));
 
     if (!user) {
-      return res.status(401).json({
-        error: 'invalid_grant',
-        message: 'User not found',
-      });
+      throw errorHelpers.invalidGrant('User not found');
     }
 
     // Create new token pair
@@ -142,30 +120,17 @@ router.post('/refresh', refreshRateLimit, async (req, res) => {
     );
 
     res.json(newTokenPair);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        error: 'validation_error',
-        message: 'Invalid request data',
-        details: error.errors,
-      });
-    }
-
-    console.error('Refresh error:', error);
-    res.status(500).json({
-      error: 'internal_server_error',
-      message: 'Token refresh failed',
-    });
-  }
-});
+  })
+);
 
 /**
  * POST /v1/auth/logout
  * Revoke current refresh token
  */
-router.post('/logout', async (req, res) => {
-  try {
-    const { refreshToken } = refreshSchema.parse(req.body);
+router.post('/logout',
+  validateRequest(refreshSchema),
+  asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body;
 
     const storedToken = await validateRefreshToken(refreshToken);
     if (storedToken) {
@@ -173,29 +138,21 @@ router.post('/logout', async (req, res) => {
     }
 
     res.json({ message: 'Logged out successfully' });
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({
-      error: 'internal_server_error',
-      message: 'Logout failed',
-    });
-  }
-});
+  })
+);
 
 /**
  * POST /v1/auth/logout-all
  * Revoke all refresh tokens for user (logout from all devices)
  */
-router.post('/logout-all', async (req, res) => {
-  try {
-    const { refreshToken } = refreshSchema.parse(req.body);
+router.post('/logout-all',
+  validateRequest(refreshSchema),
+  asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body;
 
     const storedToken = await validateRefreshToken(refreshToken);
     if (!storedToken) {
-      return res.status(401).json({
-        error: 'invalid_grant',
-        message: 'Invalid refresh token',
-      });
+      throw errorHelpers.invalidGrant();
     }
 
     // Get current user to increment token version
@@ -205,10 +162,7 @@ router.post('/logout-all', async (req, res) => {
       .where(eq(users.id, storedToken.userId));
 
     if (!currentUser) {
-      return res.status(401).json({
-        error: 'invalid_grant',
-        message: 'User not found',
-      });
+      throw errorHelpers.invalidGrant('User not found');
     }
 
     // Increment token version to invalidate all access tokens
@@ -221,31 +175,23 @@ router.post('/logout-all', async (req, res) => {
     await revokeAllUserRefreshTokens(storedToken.userId);
 
     res.json({ message: 'Logged out from all devices' });
-  } catch (error) {
-    console.error('Logout-all error:', error);
-    res.status(500).json({
-      error: 'internal_server_error',
-      message: 'Logout from all devices failed',
-    });
-  }
-});
+  })
+);
 
 /**
  * POST /v1/auth/register
  * Register a new user (first-party only)
  */
-router.post('/register', registrationRateLimit, async (req, res) => {
-  try {
-    const { email, password, tenantId, role } = registerSchema.parse(req.body);
+router.post('/register', 
+  registrationRateLimit,
+  validateRequest(registerSchema),
+  asyncHandler(async (req, res) => {
+    const { email, password, tenantId, role } = req.body;
 
     // Validate password strength
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      return res.status(400).json({
-        error: 'weak_password',
-        message: 'Password does not meet requirements',
-        details: passwordValidation.errors,
-      });
+      throw errorHelpers.weakPassword(passwordValidation.errors);
     }
 
     // Check if user already exists
@@ -260,10 +206,7 @@ router.post('/register', registrationRateLimit, async (req, res) => {
       );
 
     if (existingUser) {
-      return res.status(409).json({
-        error: 'user_exists',
-        message: 'User already exists in this tenant',
-      });
+      throw errorHelpers.userExists();
     }
 
     // Hash password and create user
@@ -294,21 +237,7 @@ router.post('/register', registrationRateLimit, async (req, res) => {
       },
       ...tokenPair,
     });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        error: 'validation_error',
-        message: 'Invalid request data',
-        details: error.errors,
-      });
-    }
-
-    console.error('Registration error:', error);
-    res.status(500).json({
-      error: 'internal_server_error',
-      message: 'Registration failed',
-    });
-  }
-});
+  })
+);
 
 export default router;
