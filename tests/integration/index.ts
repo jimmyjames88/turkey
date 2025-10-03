@@ -3,6 +3,7 @@ import { testEdgeCases } from './api/edgeCases.test';
 import { testAdvancedFlow } from './api/advancedFlow.test';
 import { testRateLimiting } from './api/rateLimiting.test';
 import { testAuthenticationMiddleware } from './api/authMiddleware.test';
+import { testAppAudiences } from './api/appAudiences.test';
 
 /**
  * Main test runner for all integration tests
@@ -17,7 +18,8 @@ async function runAllIntegrationTests() {
     edgeCases: { total: 0, passed: 0, failed: 0, expectedFailures: 0, testsRun: 0 },
     advancedFlow: { total: 0, passed: 0, failed: 0, expectedFailures: 0 },
     rateLimiting: { total: 0, passed: 0, failed: 0, testsRun: 0 },
-    authMiddleware: { total: 0, passed: 0, failed: 0, testsRun: 0 }
+    authMiddleware: { total: 0, passed: 0, failed: 0, testsRun: 0 },
+    appAudiences: { passedTests: 0, totalTests: 0, allPassed: false }
   };
 
   try {
@@ -67,13 +69,22 @@ async function runAllIntegrationTests() {
     results.authMiddleware = await testAuthenticationMiddleware();
     console.log('\n');
 
+    // Small delay between suites
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Run app-specific audiences tests
+    console.log('🎯 SUITE 6: App-Specific JWT Audiences');
+    console.log('--------------------------------------');
+    results.appAudiences = await testAppAudiences();
+    console.log('\n');
+
     // Print summary
     console.log('📊 INTEGRATION TEST SUMMARY');
     console.log('============================');
     
-    const totalTests = results.basicEndpoints.total + results.edgeCases.total + results.advancedFlow.total + results.rateLimiting.total + results.authMiddleware.total;
-    const totalPassed = results.basicEndpoints.passed + results.edgeCases.passed + results.advancedFlow.passed + results.rateLimiting.passed + results.authMiddleware.passed;
-    const totalFailed = results.basicEndpoints.failed + results.edgeCases.failed + results.advancedFlow.failed + results.rateLimiting.failed + results.authMiddleware.failed;
+    const totalTests = results.basicEndpoints.total + results.edgeCases.total + results.advancedFlow.total + results.rateLimiting.total + results.authMiddleware.total + results.appAudiences.totalTests;
+    const totalPassed = results.basicEndpoints.passed + results.edgeCases.passed + results.advancedFlow.passed + results.rateLimiting.passed + results.authMiddleware.passed + results.appAudiences.passedTests;
+    const totalFailed = results.basicEndpoints.failed + results.edgeCases.failed + results.advancedFlow.failed + results.rateLimiting.failed + results.authMiddleware.failed + (results.appAudiences.totalTests - results.appAudiences.passedTests);
     const totalExpectedFailures = results.edgeCases.expectedFailures + results.advancedFlow.expectedFailures;
 
     console.log(`✅ Total Tests: ${totalTests}`);
@@ -82,6 +93,7 @@ async function runAllIntegrationTests() {
     console.log(`🎯 Expected Failures: ${totalExpectedFailures} (security validations working correctly)`);
     console.log(`🛡️  Rate Limiting Tests: ${results.rateLimiting.passed}/${results.rateLimiting.total} passed`);
     console.log(`🔐 Auth Middleware Tests: ${results.authMiddleware.passed}/${results.authMiddleware.total} passed`);
+    console.log(`🎯 App Audiences Tests: ${results.appAudiences.passedTests}/${results.appAudiences.totalTests} passed`);
     console.log(`📈 Success Rate: ${((totalPassed / totalTests) * 100).toFixed(1)}%`);
 
     if (totalFailed === 0) {
