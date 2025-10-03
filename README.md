@@ -458,6 +458,13 @@ Health check endpoint.
 - Content-type validation for POST/PUT/PATCH requests
 - Request size limits (default: 100KB)
 
+### App-Specific JWT Audiences
+
+- Token isolation between different applications
+- Prevents cross-app token usage for enhanced security
+- Optional audience parameter in all auth endpoints
+- Audience validation with alphanumeric + underscore/hyphen pattern
+
 ### Password Requirements
 
 - Minimum 8 characters
