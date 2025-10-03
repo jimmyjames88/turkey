@@ -75,10 +75,12 @@ export interface LoginRequest {
   email: string;
   password: string;
   tenantId: string;
+  audience?: string;
 }
 
 export interface RefreshRequest {
   refreshToken: string;
+  audience?: string;
 }
 
 export interface RegisterRequest {
@@ -86,6 +88,7 @@ export interface RegisterRequest {
   password: string;
   tenantId: string;
   role?: string;
+  audience?: string;
 }
 
 export interface AuthenticatedRequest extends Request {
