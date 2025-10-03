@@ -25,10 +25,20 @@ const loginSchema = z.object({
   email: commonSchemas.email,
   password: commonSchemas.password.min(1, 'Password is required'),
   tenantId: commonSchemas.tenantId,
+  audience: z.string()
+    .min(1, 'Audience cannot be empty')
+    .max(100, 'Audience too long')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Audience must contain only letters, numbers, underscores, and hyphens')
+    .optional(),
 });
 
 const refreshSchema = z.object({
   refreshToken: commonSchemas.jwtToken,
+  audience: z.string()
+    .min(1, 'Audience cannot be empty')
+    .max(100, 'Audience too long')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Audience must contain only letters, numbers, underscores, and hyphens')
+    .optional(),
 });
 
 const registerSchema = z.object({
@@ -36,6 +46,11 @@ const registerSchema = z.object({
   password: commonSchemas.password,
   tenantId: commonSchemas.tenantId,
   role: commonSchemas.role,
+  audience: z.string()
+    .min(1, 'Audience cannot be empty')
+    .max(100, 'Audience too long')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Audience must contain only letters, numbers, underscores, and hyphens')
+    .optional(),
 });
 
 /**
@@ -49,7 +64,7 @@ router.post('/login',
   asyncHandler(async (req, res) => {
     let loginSuccess = false;
     
-    const { email, password, tenantId } = req.body;
+    const { email, password, tenantId, audience } = req.body;
 
     // Find user
     const [user] = await db
@@ -68,8 +83,8 @@ router.post('/login',
       throw errorHelpers.invalidCredentials();
     }
 
-    // Create token pair
-    const tokenPair = await createTokenPair(user);
+    // Create token pair with app-specific audience
+    const tokenPair = await createTokenPair(user, '', audience);
     
     // Store refresh token
     await storeRefreshToken(tokenPair.refreshToken, user.id, user.tenantId);
@@ -90,7 +105,7 @@ router.post('/refresh',
   refreshRateLimit,
   validateRequest(refreshSchema),
   asyncHandler(async (req, res) => {
-    const { refreshToken } = req.body;
+    const { refreshToken, audience } = req.body;
 
     // Validate refresh token
     const storedToken = await validateRefreshToken(refreshToken);
@@ -108,8 +123,8 @@ router.post('/refresh',
       throw errorHelpers.invalidGrant('User not found');
     }
 
-    // Create new token pair
-    const newTokenPair = await createTokenPair(user);
+    // Create new token pair with app-specific audience
+    const newTokenPair = await createTokenPair(user, '', audience);
     
     // Rotate refresh token
     await rotateRefreshToken(
@@ -186,7 +201,7 @@ router.post('/register',
   registrationRateLimit,
   validateRequest(registerSchema),
   asyncHandler(async (req, res) => {
-    const { email, password, tenantId, role } = req.body;
+    const { email, password, tenantId, role, audience } = req.body;
 
     // Validate password strength
     const passwordValidation = validatePassword(password);
@@ -222,8 +237,8 @@ router.post('/register',
       })
       .returning();
 
-    // Create initial token pair
-    const tokenPair = await createTokenPair(newUser);
+    // Create initial token pair with app-specific audience
+    const tokenPair = await createTokenPair(newUser, '', audience);
     
     // Store refresh token
     await storeRefreshToken(tokenPair.refreshToken, newUser.id, newUser.tenantId);
