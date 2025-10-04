@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./public/turkey-logo.svg" alt="Turkey" width="300" >
+</p>
+
 # 🦃 TurKey Auth API
 
 A production-ready JWT authentication service with ES256 signing, JWKS support, refresh token rotation, and comprehensive security features.
