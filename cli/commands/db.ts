@@ -12,7 +12,7 @@ dbCommands
       console.log('🔄 Running database migrations...');
       
       // Import drizzle migration utilities
-      const { db } = await import('../../db');
+      const { db } = await import('../../src/db');
       const { migrate } = await import('drizzle-orm/postgres-js/migrator');
       const path = await import('path');
       
@@ -36,7 +36,7 @@ dbCommands
     try {
       console.log('🔍 Checking database connection...');
       
-      const { db } = await import('../../db');
+      const { db } = await import('../../src/db');
       const { sql } = await import('drizzle-orm');
       
       // Simple query to test connection
@@ -56,8 +56,8 @@ dbCommands
   .description('Show database statistics')
   .action(async () => {
     try {
-      const { db } = await import('../../db');
-      const { users, refreshTokens, keys, audit } = await import('../../db/schema');
+      const { db } = await import('../../src/db');
+      const { users, refreshTokens, keys, audit } = await import('../../src/db/schema');
       const { sql } = await import('drizzle-orm');
 
       console.log('📊 Database Statistics:\n');

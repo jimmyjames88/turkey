@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 
 import { Command } from 'commander';
 import { tenantCommands } from './commands/tenant';
@@ -10,8 +10,8 @@ import { devCommands } from './commands/dev';
 const program = new Command();
 
 program
-  .name('jive')
-  .description('Jive - Turkey Authentication Service CLI')
+  .name('gravy')
+  .description('🍗 Gravy - Turkey Authentication Service CLI')
   .version('1.0.0');
 
 // Add command groups

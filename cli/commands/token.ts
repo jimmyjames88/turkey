@@ -57,8 +57,8 @@ tokenCommands
   .option('-l, --limit <number>', 'Limit number of results', '50')
   .action(async (options: { user?: string; tenant?: string; activeOnly?: boolean; limit: string }) => {
     try {
-      const { db } = await import('../../db');
-      const { refreshTokens, users } = await import('../../db/schema');
+      const { db } = await import('../../src/db');
+      const { refreshTokens, users } = await import('../../src/db/schema');
       const { eq, and, isNull } = await import('drizzle-orm');
 
       // Build where conditions

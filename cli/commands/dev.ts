@@ -13,7 +13,7 @@ devCommands
 
       // 1. Check database connection
       console.log('1️⃣ Checking database connection...');
-      const { db } = await import('../../db');
+      const { db } = await import('../../src/db');
       const { sql } = await import('drizzle-orm');
       await db.execute(sql`SELECT 1`);
       console.log('   ✅ Database connection successful\n');
@@ -29,13 +29,13 @@ devCommands
 
       // 3. Initialize key management
       console.log('3️⃣ Initializing cryptographic keys...');
-      const { initializeKeyManagement } = await import('../../services/keyService');
+      const { initializeKeyManagement } = await import('../../src/services/keyService');
       await initializeKeyManagement();
       console.log('   ✅ Key management initialized\n');
 
       // 4. Create default admin user if none exists
       console.log('4️⃣ Checking for admin user...');
-      const { users } = await import('../../db/schema');
+      const { users } = await import('../../src/db/schema');
       const { eq } = await import('drizzle-orm');
       
       const existingAdmin = await db.select().from(users).where(eq(users.role, 'admin')).limit(1);
@@ -87,8 +87,8 @@ devCommands
   .option('-r, --role <role>', 'User role', 'user')
   .action(async (options: { email: string; password: string; tenant: string; role: string }) => {
     try {
-      const { db } = await import('../../db');
-      const { users } = await import('../../db/schema');
+      const { db } = await import('../../src/db');
+      const { users } = await import('../../src/db/schema');
       const { eq } = await import('drizzle-orm');
       const bcrypt = await import('bcrypt');
 
@@ -138,21 +138,21 @@ devCommands
 
       // Database
       console.log('📊 Database:');
-      const { db } = await import('../../db');
+      const { db } = await import('../../src/db');
       const { sql } = await import('drizzle-orm');
       await db.execute(sql`SELECT 1`);
       console.log('   ✅ Connection: OK\n');
 
       // Keys
       console.log('🔐 Cryptographic Keys:');
-      const { keys } = await import('../../db/schema');
+      const { keys } = await import('../../src/db/schema');
       const { eq } = await import('drizzle-orm');
       const activeKeys = await db.select().from(keys).where(eq(keys.isActive, true));
       console.log(`   ✅ Active keys: ${activeKeys.length}\n`);
 
       // Users
       console.log('👥 Users:');
-      const { users } = await import('../../db/schema');
+      const { users } = await import('../../src/db/schema');
       const [userCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users);
       console.log(`   ✅ Total users: ${userCount.count}\n`);
 

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { db } from '../../db';
-import { users } from '../../db/schema';
+import { db } from '../../src/db';
+import { users } from '../../src/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 export const tenantCommands = new Command('tenant')

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { db } from '../../db';
-import { users } from '../../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { db } from '../../src/db';
+import { users } from '../../src/db/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import * as readline from 'readline';
 
@@ -34,15 +34,18 @@ userCommands
   .option('-r, --role <role>', 'User role', 'user')
   .action(async (options: { email: string; password: string; tenant: string; role: string }) => {
     try {
-      // Check if user already exists
+      // Check if user already exists in this tenant
       const existingUser = await db
         .select()
         .from(users)
-        .where(eq(users.email, options.email))
+        .where(and(
+          eq(users.email, options.email),
+          eq(users.tenantId, options.tenant)
+        ))
         .limit(1);
 
       if (existingUser.length > 0) {
-        console.error(`❌ User with email ${options.email} already exists`);
+        console.error(`❌ User with email ${options.email} already exists in tenant "${options.tenant}"`);
         process.exit(1);
       }
 
@@ -179,6 +182,80 @@ userCommands
       process.exit(0);
     } catch (error) {
       console.error('❌ Failed to delete user:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+// Find user by email
+userCommands
+  .command('find')
+  .description('Find users by email address (supports partial matching)')
+  .argument('<email>', 'Email address or partial email to search for')
+  .option('-t, --tenant <tenant-id>', 'Filter by tenant ID')
+  .option('-r, --role <role>', 'Filter by role')
+  .option('-e, --exact', 'Exact email match only (no partial matching)')
+  .action(async (emailQuery: string, options: { tenant?: string; role?: string; exact?: boolean }) => {
+    try {
+      // Build where conditions
+      let whereConditions = [];
+      
+      // Email condition - exact or partial match
+      if (options.exact) {
+        whereConditions.push(eq(users.email, emailQuery));
+      } else {
+        whereConditions.push(sql`${users.email} ILIKE ${`%${emailQuery}%`}`);
+      }
+      
+      // Add tenant filter if specified
+      if (options.tenant) {
+        whereConditions.push(eq(users.tenantId, options.tenant));
+      }
+      
+      // Add role filter if specified
+      if (options.role) {
+        whereConditions.push(eq(users.role, options.role));
+      }
+      
+      // Combine all conditions
+      const whereCondition = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
+
+      const foundUsers = await db.select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+        tenantId: users.tenantId,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(whereCondition)
+      .orderBy(users.email);
+
+      if (foundUsers.length === 0) {
+        const searchType = options.exact ? 'exact' : 'partial';
+        console.log(`🔍 No users found with ${searchType} email match: "${emailQuery}"`);
+        if (options.tenant) {
+          console.log(`   in tenant: ${options.tenant}`);
+        }
+        if (options.role) {
+          console.log(`   with role: ${options.role}`);
+        }
+        process.exit(0);
+      }
+
+      const searchType = options.exact ? 'exact' : 'partial';
+      console.log(`\n🎯 Found ${foundUsers.length} user(s) with ${searchType} email match: "${emailQuery}"\n`);
+      
+      foundUsers.forEach(user => {
+        console.log(`📧 ${user.email} (${user.role})`);
+        console.log(`   ID: ${user.id}`);
+        console.log(`   Tenant: ${user.tenantId}`);
+        console.log(`   Created: ${user.createdAt.toLocaleDateString()}`);
+        console.log();
+      });
+      
+      process.exit(0);
+    } catch (error) {
+      console.error('❌ Failed to find users:', error instanceof Error ? error.message : error);
       process.exit(1);
     }
   });

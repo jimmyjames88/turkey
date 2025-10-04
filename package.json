@@ -22,8 +22,8 @@
     "test:integration:edge": "ts-node tests/integration/edgeCases.test.ts",
     "test:integration:advanced": "ts-node tests/integration/advancedFlow.test.ts",
     "clean": "rimraf dist",
-    "cli": "ts-node src/cli/jive.ts",
-    "jive": "ts-node src/cli/jive.ts"
+    "cli": "ts-node cli/gravy.ts",
+    "gravy": "ts-node cli/gravy.ts"
   },
   "dependencies": {
     "@types/node-fetch": "^2.6.13",
