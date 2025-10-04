@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+
+const { execSync } = require('child_process');
+const path = require('path');
+
+// Get the directory where this script is located
+const scriptDir = path.dirname(__filename);
+
+// Convert colon syntax to space syntax
+// jive tenant:list -> tenant list
+// jive user:create -> user create
+const args = process.argv.slice(2);
+const convertedArgs = args.map(arg => {
+  if (arg.includes(':')) {
+    return arg.replace(':', ' ');
+  }
+  return arg;
+});
+
+// Build the command
+const command = `npm run jive -- ${convertedArgs.join(' ')}`;
+
+try {
+  // Execute the command and inherit stdio
+  execSync(command, { 
+    stdio: 'inherit', 
+    cwd: scriptDir 
+  });
+} catch (error) {
+  process.exit(error.status || 1);
+}
