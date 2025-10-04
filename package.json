@@ -21,11 +21,14 @@
     "test:integration:basic": "ts-node tests/integration/basicEndpoints.test.ts",
     "test:integration:edge": "ts-node tests/integration/edgeCases.test.ts",
     "test:integration:advanced": "ts-node tests/integration/advancedFlow.test.ts",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "cli": "ts-node src/cli/jive.ts",
+    "jive": "ts-node src/cli/jive.ts"
   },
   "dependencies": {
     "@types/node-fetch": "^2.6.13",
     "bcrypt": "^5.1.1",
+    "commander": "^12.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.30.4",
