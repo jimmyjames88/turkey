@@ -1,10 +1,10 @@
-import { pgTable, uuid, varchar, text, timestamp, integer, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, integer, boolean, index, unique } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users table
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  email: varchar('email', { length: 255 }).notNull().unique(),
+  email: varchar('email', { length: 255 }).notNull(),
   passwordHash: text('password_hash').notNull(),
   role: varchar('role', { length: 50 }).notNull().default('user'),
   tenantId: varchar('tenant_id', { length: 50 }).notNull(),
@@ -13,6 +13,7 @@ export const users = pgTable('users', {
 }, (table) => ({
   emailIdx: index('users_email_idx').on(table.email),
   tenantIdx: index('users_tenant_idx').on(table.tenantId),
+  emailTenantUnique: unique('users_email_tenant_unique').on(table.email, table.tenantId),
 }));
 
 // Refresh tokens table
