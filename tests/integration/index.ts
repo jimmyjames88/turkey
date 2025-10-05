@@ -4,6 +4,7 @@ import { testAdvancedFlow } from './api/advancedFlow.test';
 import { testRateLimiting } from './api/rateLimiting.test';
 import { testAuthenticationMiddleware } from './api/authMiddleware.test';
 import { testAppAudiences } from './api/appAudiences.test';
+import { setupTestTenants } from '../helpers/testUtils';
 
 /**
  * Main test runner for all integration tests
@@ -26,6 +27,11 @@ async function runAllIntegrationTests() {
     // Add small delay to ensure server is ready
     console.log('⏳ Waiting for server to be ready...');
     await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Setup test tenants in database
+    console.log('🏗️  Setting up test tenants...');
+    await setupTestTenants();
+    console.log('✅ Test tenants created\n');
     
     // Run basic endpoints tests
     console.log('📋 SUITE 1: Basic Endpoints');
