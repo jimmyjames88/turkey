@@ -1,5 +1,20 @@
-import { pgTable, uuid, varchar, text, timestamp, integer, boolean, index, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, integer, boolean, index, unique, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+
+// Tenants table
+export const tenants = pgTable('tenants', {
+  id: varchar('id', { length: 50 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  domain: varchar('domain', { length: 255 }),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  settings: jsonb('settings').default('{}'),
+}, (table) => ({
+  nameIdx: index('tenants_name_idx').on(table.name),
+  domainIdx: index('tenants_domain_idx').on(table.domain),
+  activeIdx: index('tenants_active_idx').on(table.isActive),
+}));
 
 // Users table
 export const users = pgTable('users', {
@@ -7,7 +22,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull(),
   passwordHash: text('password_hash').notNull(),
   role: varchar('role', { length: 50 }).notNull().default('user'),
-  tenantId: varchar('tenant_id', { length: 50 }).notNull(),
+  tenantId: varchar('tenant_id', { length: 50 }).notNull().references(() => tenants.id),
   tokenVersion: integer('token_version').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
@@ -20,7 +35,7 @@ export const users = pgTable('users', {
 export const refreshTokens = pgTable('refresh_tokens', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  tenantId: varchar('tenant_id', { length: 50 }).notNull(),
+  tenantId: varchar('tenant_id', { length: 50 }).notNull().references(() => tenants.id),
   tokenHash: text('token_hash').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   expiresAt: timestamp('expires_at').notNull(),
@@ -76,16 +91,14 @@ export const audit = pgTable('audit', {
 }));
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  refreshTokens: many(refreshTokens),
-  revokedJtis: many(revokedJti),
-  auditLogs: many(audit),
-}));
-
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
   user: one(users, {
     fields: [refreshTokens.userId],
     references: [users.id],
+  }),
+  tenant: one(tenants, {
+    fields: [refreshTokens.tenantId],
+    references: [tenants.id],
   }),
 }));
 
@@ -101,4 +114,19 @@ export const auditRelations = relations(audit, ({ one }) => ({
     fields: [audit.userId],
     references: [users.id],
   }),
+}));
+
+// Tenant relations
+export const tenantsRelations = relations(tenants, ({ many }) => ({
+  users: many(users),
+  refreshTokens: many(refreshTokens),
+}));
+
+// User relations (updated to include tenant)
+export const usersRelations = relations(users, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [users.tenantId],
+    references: [tenants.id],
+  }),
+  refreshTokens: many(refreshTokens),
 }));
