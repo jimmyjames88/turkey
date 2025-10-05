@@ -32,7 +32,7 @@ async function testEdgeCases() {
   const testUser = {
     email: 'duplicate-test@example.com',
     password: 'SecurePass123!',
-    tenantId: 'tenant_duplicate_test',
+    tenantId: 'tenant_basic', // Use existing tenant instead of non-existent one
     role: 'user'
   };
   

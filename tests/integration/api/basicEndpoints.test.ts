@@ -7,6 +7,9 @@ import { testEndpoint, logTestResult, generateTestUser, type TestResult } from '
 async function testBasicEndpoints() {
   console.log('🧪 Testing Basic API Endpoints\n');
 
+  // Generate consistent test user data
+  const testUser = generateTestUser('basic');
+  
   const tests: Array<() => Promise<TestResult>> = [
     // 1. Health Check
     () => testEndpoint('/health'),
@@ -17,7 +20,7 @@ async function testBasicEndpoints() {
     // 3. User Registration (may already exist from previous runs)
     async () => {
       const result = await testEndpoint('/v1/auth/register', 'POST', {
-        ...generateTestUser('basic'),
+        ...testUser,
         role: 'user'
       });
       // Accept both 201 (new user) and 409 (user already exists)
@@ -29,9 +32,9 @@ async function testBasicEndpoints() {
 
     // 4. User Login
     () => testEndpoint('/v1/auth/login', 'POST', {
-      email: 'testbasic@example.com',
-      password: 'SecurePass123!',
-      tenantId: 'tenant_basic'
+      email: testUser.email,
+      password: testUser.password,
+      tenantId: testUser.tenantId
     }),
   ];
 
