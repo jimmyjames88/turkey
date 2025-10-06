@@ -1,14 +1,14 @@
-import { createHash } from 'crypto';
-import { db } from '@/db';
-import { refreshTokens } from '@/db/schema';
-import { eq, and, lt, gt, isNull } from 'drizzle-orm';
-import { config } from '@/config';
+import { createHash } from 'crypto'
+import { db } from '@/db'
+import { refreshTokens } from '@/db/schema'
+import { eq, and, lt, gt, isNull } from 'drizzle-orm'
+import { config } from '@/config'
 
 /**
  * Hash a refresh token for secure storage
  */
 export function hashRefreshToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+  return createHash('sha256').update(token).digest('hex')
 }
 
 /**
@@ -19,25 +19,28 @@ export async function storeRefreshToken(
   userId: string,
   tenantId: string
 ): Promise<string> {
-  const tokenHash = hashRefreshToken(token);
-  const expiresAt = new Date(Date.now() + config.refreshTokenTtl * 1000);
+  const tokenHash = hashRefreshToken(token)
+  const expiresAt = new Date(Date.now() + config.refreshTokenTtl * 1000)
 
-  const [result] = await db.insert(refreshTokens).values({
-    userId,
-    tenantId,
-    tokenHash,
-    expiresAt,
-  }).returning({ id: refreshTokens.id });
+  const [result] = await db
+    .insert(refreshTokens)
+    .values({
+      userId,
+      tenantId,
+      tokenHash,
+      expiresAt,
+    })
+    .returning({ id: refreshTokens.id })
 
-  return result.id;
+  return result.id
 }
 
 /**
  * Validate and retrieve refresh token data
  */
 export async function validateRefreshToken(token: string) {
-  const tokenHash = hashRefreshToken(token);
-  
+  const tokenHash = hashRefreshToken(token)
+
   const [refreshToken] = await db
     .select()
     .from(refreshTokens)
@@ -47,19 +50,16 @@ export async function validateRefreshToken(token: string) {
         isNull(refreshTokens.revokedAt),
         gt(refreshTokens.expiresAt, new Date())
       )
-    );
+    )
 
-  return refreshToken || null;
+  return refreshToken || null
 }
 
 /**
  * Revoke a refresh token
  */
 export async function revokeRefreshToken(tokenId: string): Promise<void> {
-  await db
-    .update(refreshTokens)
-    .set({ revokedAt: new Date() })
-    .where(eq(refreshTokens.id, tokenId));
+  await db.update(refreshTokens).set({ revokedAt: new Date() }).where(eq(refreshTokens.id, tokenId))
 }
 
 /**
@@ -69,12 +69,7 @@ export async function revokeAllUserRefreshTokens(userId: string): Promise<void> 
   await db
     .update(refreshTokens)
     .set({ revokedAt: new Date() })
-    .where(
-      and(
-        eq(refreshTokens.userId, userId),
-        isNull(refreshTokens.revokedAt)
-      )
-    );
+    .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)))
 }
 
 /**
@@ -87,27 +82,25 @@ export async function rotateRefreshToken(
   tenantId: string
 ): Promise<string> {
   // Store new token
-  const newTokenId = await storeRefreshToken(newToken, userId, tenantId);
-  
+  const newTokenId = await storeRefreshToken(newToken, userId, tenantId)
+
   // Revoke old token and set replacement reference
   await db
     .update(refreshTokens)
-    .set({ 
+    .set({
       revokedAt: new Date(),
-      replacedById: newTokenId 
+      replacedById: newTokenId,
     })
-    .where(eq(refreshTokens.id, oldTokenId));
+    .where(eq(refreshTokens.id, oldTokenId))
 
-  return newTokenId;
+  return newTokenId
 }
 
 /**
  * Clean up expired refresh tokens
  */
 export async function cleanupExpiredTokens(): Promise<number> {
-  const result = await db
-    .delete(refreshTokens)
-    .where(lt(refreshTokens.expiresAt, new Date()));
+  const result = await db.delete(refreshTokens).where(lt(refreshTokens.expiresAt, new Date()))
 
-  return result.length || 0;
+  return result.length || 0
 }

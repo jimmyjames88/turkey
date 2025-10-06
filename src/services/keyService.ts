@@ -1,41 +1,41 @@
-import { generateKeyPair, exportPKCS8, exportSPKI } from 'jose';
-import { randomBytes } from 'crypto';
-import { db } from '@/db';
-import { keys } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { generateKeyPair, exportPKCS8, exportSPKI } from 'jose'
+import { randomBytes } from 'crypto'
+import { db } from '@/db'
+import { keys } from '@/db/schema'
+import { eq, and } from 'drizzle-orm'
 
 export interface KeyPair {
-  kid: string;
-  publicKey: any; // CryptoKey - using any for Node.js compatibility
-  privateKey: any; // CryptoKey - using any for Node.js compatibility
-  publicPem: string;
-  privatePem: string;
+  kid: string
+  publicKey: any // CryptoKey - using any for Node.js compatibility
+  privateKey: any // CryptoKey - using any for Node.js compatibility
+  publicPem: string
+  privatePem: string
 }
 
 /**
  * Generate a new ES256 key pair for JWT signing
  */
 export async function generateES256KeyPair(): Promise<KeyPair> {
-  const { publicKey, privateKey } = await generateKeyPair('ES256');
-  
-  const kid = generateKid();
-  const publicPem = await exportSPKI(publicKey);
-  const privatePem = await exportPKCS8(privateKey);
-  
+  const { publicKey, privateKey } = await generateKeyPair('ES256')
+
+  const kid = generateKid()
+  const publicPem = await exportSPKI(publicKey)
+  const privatePem = await exportPKCS8(privateKey)
+
   return {
     kid,
     publicKey,
     privateKey,
     publicPem,
     privatePem,
-  };
+  }
 }
 
 /**
  * Generate a unique key identifier
  */
 export function generateKid(): string {
-  return 'key_' + randomBytes(16).toString('hex');
+  return 'key_' + randomBytes(16).toString('hex')
 }
 
 /**
@@ -48,7 +48,7 @@ export async function storeKeyPair(keyPair: KeyPair): Promise<void> {
     publicPem: keyPair.publicPem,
     privatePem: keyPair.privatePem, // TODO: Encrypt this in production
     isActive: true,
-  });
+  })
 }
 
 /**
@@ -60,16 +60,16 @@ export async function getActiveSigningKey(): Promise<KeyPair | null> {
     .from(keys)
     .where(and(eq(keys.isActive, true), eq(keys.alg, 'ES256')))
     .orderBy(keys.createdAt)
-    .limit(1);
+    .limit(1)
 
   if (!activeKey) {
-    return null;
+    return null
   }
 
   // Import keys from PEM
-  const { importPKCS8, importSPKI } = await import('jose');
-  const privateKey = await importPKCS8(activeKey.privatePem, 'ES256');
-  const publicKey = await importSPKI(activeKey.publicPem, 'ES256');
+  const { importPKCS8, importSPKI } = await import('jose')
+  const privateKey = await importPKCS8(activeKey.privatePem, 'ES256')
+  const publicKey = await importSPKI(activeKey.publicPem, 'ES256')
 
   return {
     kid: activeKey.kid,
@@ -77,7 +77,7 @@ export async function getActiveSigningKey(): Promise<KeyPair | null> {
     privateKey,
     publicPem: activeKey.publicPem,
     privatePem: activeKey.privatePem,
-  };
+  }
 }
 
 /**
@@ -91,9 +91,9 @@ export async function getActivePublicKeys() {
       publicPem: keys.publicPem,
     })
     .from(keys)
-    .where(eq(keys.isActive, true));
+    .where(eq(keys.isActive, true))
 
-  return activeKeys;
+  return activeKeys
 }
 
 /**
@@ -102,25 +102,25 @@ export async function getActivePublicKeys() {
 export async function retireKey(kid: string): Promise<void> {
   await db
     .update(keys)
-    .set({ 
-      isActive: false, 
-      retiredAt: new Date() 
+    .set({
+      isActive: false,
+      retiredAt: new Date(),
     })
-    .where(eq(keys.kid, kid));
+    .where(eq(keys.kid, kid))
 }
 
 /**
  * Initialize the key management system with a default key pair
  */
 export async function initializeKeyManagement(): Promise<void> {
-  const existingKey = await getActiveSigningKey();
-  
+  const existingKey = await getActiveSigningKey()
+
   if (!existingKey) {
-    console.log('🔑 Generating initial ES256 key pair...');
-    const keyPair = await generateES256KeyPair();
-    await storeKeyPair(keyPair);
-    console.log(`🔑 Generated key pair with kid: ${keyPair.kid}`);
+    console.log('🔑 Generating initial ES256 key pair...')
+    const keyPair = await generateES256KeyPair()
+    await storeKeyPair(keyPair)
+    console.log(`🔑 Generated key pair with kid: ${keyPair.kid}`)
   } else {
-    console.log(`🔑 Using existing key pair with kid: ${existingKey.kid}`);
+    console.log(`🔑 Using existing key pair with kid: ${existingKey.kid}`)
   }
 }

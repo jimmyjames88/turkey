@@ -1,27 +1,27 @@
-import { Request, Response, NextFunction } from 'express';
-import { jwtVerify, createRemoteJWKSet, JWTPayload } from 'jose';
-import { db } from '@/db';
-import { users, revokedJti } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { Request, Response, NextFunction } from 'express'
+import { jwtVerify, createRemoteJWKSet, JWTPayload } from 'jose'
+import { db } from '@/db'
+import { users, revokedJti } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 
 // Extend Express Request type to include user context
 declare global {
   namespace Express {
     interface Request {
       user?: {
-        id: string;
-        email: string;
-        role: string;
-        tenantId: string;
-        tokenVersion: number;
-        jti: string;
-        iat: number;
-        exp: number;
-      };
+        id: string
+        email: string
+        role: string
+        tenantId: string
+        tokenVersion: number
+        jti: string
+        iat: number
+        exp: number
+      }
       token?: {
-        accessToken: string;
-        payload: JWTPayload;
-      };
+        accessToken: string
+        payload: JWTPayload
+      }
     }
   }
 }
@@ -29,32 +29,32 @@ declare global {
 /**
  * JWKS cache configuration
  */
-const JWKS_URL = process.env.JWKS_URL || 'http://localhost:3000/.well-known/jwks.json';
-const JWKS = createRemoteJWKSet(new URL(JWKS_URL));
+const JWKS_URL = process.env.JWKS_URL || 'http://localhost:3000/.well-known/jwks.json'
+const JWKS = createRemoteJWKSet(new URL(JWKS_URL))
 
 // Cache for JWKS with TTL
-let jwksCache: any = null;
-let jwksCacheExpiry = 0;
-const JWKS_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+let jwksCache: any = null
+let jwksCacheExpiry = 0
+const JWKS_CACHE_TTL = 15 * 60 * 1000 // 15 minutes
 
 /**
  * Get cached JWKS or fetch new ones
  */
 async function getCachedJWKS() {
-  const now = Date.now();
-  
+  const now = Date.now()
+
   if (jwksCache && now < jwksCacheExpiry) {
-    return jwksCache;
+    return jwksCache
   }
-  
+
   try {
     // The JWKS will be cached automatically by jose's createRemoteJWKSet
-    jwksCache = JWKS;
-    jwksCacheExpiry = now + JWKS_CACHE_TTL;
-    return jwksCache;
+    jwksCache = JWKS
+    jwksCacheExpiry = now + JWKS_CACHE_TTL
+    return jwksCache
   } catch (error) {
-    console.error('Failed to fetch JWKS:', error);
-    throw new Error('Unable to fetch JWKS for token validation');
+    console.error('Failed to fetch JWKS:', error)
+    throw new Error('Unable to fetch JWKS for token validation')
   }
 }
 
@@ -63,15 +63,15 @@ async function getCachedJWKS() {
  */
 function extractBearerToken(authHeader: string | undefined): string | null {
   if (!authHeader) {
-    return null;
+    return null
   }
-  
-  const parts = authHeader.split(' ');
+
+  const parts = authHeader.split(' ')
   if (parts.length !== 2 || parts[0] !== 'Bearer') {
-    return null;
+    return null
   }
-  
-  return parts[1];
+
+  return parts[1]
 }
 
 /**
@@ -83,24 +83,24 @@ async function isJtiRevoked(jti: string): Promise<boolean> {
       .select()
       .from(revokedJti)
       .where(eq(revokedJti.jti, jti))
-      .limit(1);
-    
+      .limit(1)
+
     if (!revokedToken) {
-      return false;
+      return false
     }
-    
+
     // Check if the revocation has expired
     if (revokedToken.expiresAt && new Date() > revokedToken.expiresAt) {
       // Clean up expired revocation
-      await db.delete(revokedJti).where(eq(revokedJti.jti, jti));
-      return false;
+      await db.delete(revokedJti).where(eq(revokedJti.jti, jti))
+      return false
     }
-    
-    return true;
+
+    return true
   } catch (error) {
-    console.error('Error checking JTI revocation:', error);
+    console.error('Error checking JTI revocation:', error)
     // In case of error, assume not revoked to avoid breaking auth
-    return false;
+    return false
   }
 }
 
@@ -113,16 +113,16 @@ async function validateTokenVersion(userId: string, tokenVersion: number): Promi
       .select({ tokenVersion: users.tokenVersion })
       .from(users)
       .where(eq(users.id, userId))
-      .limit(1);
-    
+      .limit(1)
+
     if (!user) {
-      return false;
+      return false
     }
-    
-    return user.tokenVersion === tokenVersion;
+
+    return user.tokenVersion === tokenVersion
   } catch (error) {
-    console.error('Error validating token version:', error);
-    return false;
+    console.error('Error validating token version:', error)
+    return false
   }
 }
 
@@ -133,54 +133,54 @@ async function validateTokenVersion(userId: string, tokenVersion: number): Promi
 export async function authenticateToken(req: Request, res: Response, next: NextFunction) {
   try {
     // Extract token from Authorization header
-    const token = extractBearerToken(req.headers.authorization);
-    
+    const token = extractBearerToken(req.headers.authorization)
+
     if (!token) {
       return res.status(401).json({
         error: 'missing_token',
-        message: 'Authorization header with Bearer token is required'
-      });
+        message: 'Authorization header with Bearer token is required',
+      })
     }
-    
+
     // Get JWKS for verification
-    const jwks = await getCachedJWKS();
-    
+    const jwks = await getCachedJWKS()
+
     // Verify and decode the JWT
     const { payload } = await jwtVerify(token, jwks, {
       issuer: process.env.JWT_ISSUER || 'https://turkey.example.com',
-      audience: process.env.JWT_AUDIENCE || 'renoodles'
-    });
-    
+      audience: process.env.JWT_AUDIENCE || 'renoodles',
+    })
+
     // Extract required claims
-    const { sub, email, role, tenantId, tokenVersion, jti, iat, exp } = payload;
-    
+    const { sub, email, role, tenantId, tokenVersion, jti, iat, exp } = payload
+
     if (!sub || !email || !role || !tenantId || tokenVersion === undefined || !jti) {
       return res.status(401).json({
         error: 'invalid_token',
-        message: 'Token is missing required claims'
-      });
+        message: 'Token is missing required claims',
+      })
     }
-    
+
     // Check if JTI is revoked (optional, based on security requirements)
     if (process.env.ENABLE_JTI_DENYLIST === 'true') {
-      const isRevoked = await isJtiRevoked(jti as string);
+      const isRevoked = await isJtiRevoked(jti as string)
       if (isRevoked) {
         return res.status(401).json({
           error: 'token_revoked',
-          message: 'Token has been revoked'
-        });
+          message: 'Token has been revoked',
+        })
       }
     }
-    
+
     // Validate token version against user's current version
-    const isValidVersion = await validateTokenVersion(sub as string, tokenVersion as number);
+    const isValidVersion = await validateTokenVersion(sub as string, tokenVersion as number)
     if (!isValidVersion) {
       return res.status(401).json({
         error: 'token_expired',
-        message: 'Token version is invalid. Please log in again.'
-      });
+        message: 'Token version is invalid. Please log in again.',
+      })
     }
-    
+
     // Set user context on request
     req.user = {
       id: sub as string,
@@ -190,55 +190,54 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
       tokenVersion: tokenVersion as number,
       jti: jti as string,
       iat: iat as number,
-      exp: exp as number
-    };
-    
+      exp: exp as number,
+    }
+
     // Set token context for debugging/logging
     req.token = {
       accessToken: token,
-      payload
-    };
-    
-    next();
-    
+      payload,
+    }
+
+    next()
   } catch (error) {
-    console.error('Authentication error:', error);
-    
+    console.error('Authentication error:', error)
+
     // Handle specific JWT errors
     if (error instanceof Error) {
       if (error.message.includes('expired')) {
         return res.status(401).json({
           error: 'token_expired',
-          message: 'Token has expired'
-        });
+          message: 'Token has expired',
+        })
       }
-      
+
       if (error.message.includes('signature')) {
         return res.status(401).json({
           error: 'invalid_signature',
-          message: 'Token signature is invalid'
-        });
+          message: 'Token signature is invalid',
+        })
       }
-      
+
       if (error.message.includes('audience')) {
         return res.status(401).json({
           error: 'invalid_audience',
-          message: 'Token audience is invalid'
-        });
+          message: 'Token audience is invalid',
+        })
       }
-      
+
       if (error.message.includes('issuer')) {
         return res.status(401).json({
           error: 'invalid_issuer',
-          message: 'Token issuer is invalid'
-        });
+          message: 'Token issuer is invalid',
+        })
       }
     }
-    
+
     return res.status(401).json({
       error: 'invalid_token',
-      message: 'Token validation failed'
-    });
+      message: 'Token validation failed',
+    })
   }
 }
 
@@ -247,15 +246,15 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
  * Sets user context if token is present and valid, but doesn't require it
  */
 export async function optionalAuth(req: Request, res: Response, next: NextFunction) {
-  const token = extractBearerToken(req.headers.authorization);
-  
+  const token = extractBearerToken(req.headers.authorization)
+
   if (!token) {
     // No token provided, continue without auth
-    return next();
+    return next()
   }
-  
+
   // If token is provided, validate it
-  await authenticateToken(req, res, next);
+  await authenticateToken(req, res, next)
 }
 
 /**
@@ -266,19 +265,19 @@ export function requireRole(...roles: string[]) {
     if (!req.user) {
       return res.status(401).json({
         error: 'authentication_required',
-        message: 'Authentication is required for this endpoint'
-      });
+        message: 'Authentication is required for this endpoint',
+      })
     }
-    
+
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         error: 'insufficient_permissions',
-        message: `Required role: ${roles.join(' or ')}. Current role: ${req.user.role}`
-      });
+        message: `Required role: ${roles.join(' or ')}. Current role: ${req.user.role}`,
+      })
     }
-    
-    next();
-  };
+
+    next()
+  }
 }
 
 /**
@@ -290,31 +289,31 @@ export function requireSameTenant(getTenantId: (req: Request) => string) {
     if (!req.user) {
       return res.status(401).json({
         error: 'authentication_required',
-        message: 'Authentication is required for this endpoint'
-      });
+        message: 'Authentication is required for this endpoint',
+      })
     }
-    
-    const requestedTenantId = getTenantId(req);
-    
+
+    const requestedTenantId = getTenantId(req)
+
     if (req.user.tenantId !== requestedTenantId) {
       return res.status(403).json({
         error: 'tenant_access_denied',
-        message: 'Access denied: resource belongs to a different tenant'
-      });
+        message: 'Access denied: resource belongs to a different tenant',
+      })
     }
-    
-    next();
-  };
+
+    next()
+  }
 }
 
 /**
  * Admin authorization middleware
  * Convenience wrapper for admin role requirement
  */
-export const requireAdmin = requireRole('admin');
+export const requireAdmin = requireRole('admin')
 
 /**
  * User or admin authorization middleware
  * Allows both user and admin roles
  */
-export const requireUser = requireRole('user', 'admin');
+export const requireUser = requireRole('user', 'admin')

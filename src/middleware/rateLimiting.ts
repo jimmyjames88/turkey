@@ -1,5 +1,5 @@
-import rateLimit from 'express-rate-limit';
-import { Request, Response } from 'express';
+import rateLimit from 'express-rate-limit'
+import { Request, Response } from 'express'
 
 /**
  * Rate limiting middleware configuration
@@ -7,86 +7,95 @@ import { Request, Response } from 'express';
  */
 
 // Store for tracking failed login attempts per IP/email combination
-const failedAttempts = new Map<string, { count: number; lastAttempt: number; lockedUntil?: number }>();
+const failedAttempts = new Map<
+  string,
+  { count: number; lastAttempt: number; lockedUntil?: number }
+>()
 
 // Cleanup old entries every 15 minutes
-setInterval(() => {
-  const now = Date.now();
-  const fifteenMinutes = 15 * 60 * 1000;
-  
-  for (const [key, data] of failedAttempts.entries()) {
-    if (now - data.lastAttempt > fifteenMinutes) {
-      failedAttempts.delete(key);
+setInterval(
+  () => {
+    const now = Date.now()
+    const fifteenMinutes = 15 * 60 * 1000
+
+    for (const [key, data] of failedAttempts.entries()) {
+      if (now - data.lastAttempt > fifteenMinutes) {
+        failedAttempts.delete(key)
+      }
     }
-  }
-}, 15 * 60 * 1000);
+  },
+  15 * 60 * 1000
+)
 
 /**
  * Generate a key for tracking failed attempts
  */
 function getAttemptKey(ip: string, email?: string): string {
-  return email ? `${ip}:${email}` : ip;
+  return email ? `${ip}:${email}` : ip
 }
 
 /**
  * Check if an IP/email combination is currently locked out
  */
 export function isLockedOut(ip: string, email?: string): boolean {
-  const key = getAttemptKey(ip, email);
-  const attempt = failedAttempts.get(key);
-  
+  const key = getAttemptKey(ip, email)
+  const attempt = failedAttempts.get(key)
+
   if (!attempt || !attempt.lockedUntil) {
-    return false;
+    return false
   }
-  
+
   if (Date.now() > attempt.lockedUntil) {
     // Lockout expired, clean up
-    failedAttempts.delete(key);
-    return false;
+    failedAttempts.delete(key)
+    return false
   }
-  
-  return true;
+
+  return true
 }
 
 /**
  * Record a failed login attempt
  */
-export function recordFailedAttempt(ip: string, email?: string): { locked: boolean; lockoutDuration?: number } {
-  const key = getAttemptKey(ip, email);
-  const now = Date.now();
-  const attempt = failedAttempts.get(key) || { count: 0, lastAttempt: now };
-  
-  attempt.count += 1;
-  attempt.lastAttempt = now;
-  
+export function recordFailedAttempt(
+  ip: string,
+  email?: string
+): { locked: boolean; lockoutDuration?: number } {
+  const key = getAttemptKey(ip, email)
+  const now = Date.now()
+  const attempt = failedAttempts.get(key) || { count: 0, lastAttempt: now }
+
+  attempt.count += 1
+  attempt.lastAttempt = now
+
   // Progressive lockout durations
-  let lockoutDuration = 0;
+  let lockoutDuration = 0
   if (attempt.count >= 5 && attempt.count < 10) {
-    lockoutDuration = 5 * 60 * 1000; // 5 minutes
+    lockoutDuration = 5 * 60 * 1000 // 5 minutes
   } else if (attempt.count >= 10 && attempt.count < 20) {
-    lockoutDuration = 15 * 60 * 1000; // 15 minutes
+    lockoutDuration = 15 * 60 * 1000 // 15 minutes
   } else if (attempt.count >= 20) {
-    lockoutDuration = 60 * 60 * 1000; // 1 hour
+    lockoutDuration = 60 * 60 * 1000 // 1 hour
   }
-  
+
   if (lockoutDuration > 0) {
-    attempt.lockedUntil = now + lockoutDuration;
+    attempt.lockedUntil = now + lockoutDuration
   }
-  
-  failedAttempts.set(key, attempt);
-  
+
+  failedAttempts.set(key, attempt)
+
   return {
     locked: lockoutDuration > 0,
-    lockoutDuration
-  };
+    lockoutDuration,
+  }
 }
 
 /**
  * Clear failed attempts for successful login
  */
 export function clearFailedAttempts(ip: string, email?: string): void {
-  const key = getAttemptKey(ip, email);
-  failedAttempts.delete(key);
+  const key = getAttemptKey(ip, email)
+  failedAttempts.delete(key)
 }
 
 /**
@@ -94,15 +103,17 @@ export function clearFailedAttempts(ip: string, email?: string): void {
  */
 function createRateLimitHandler(context: string) {
   return (req: Request, res: Response) => {
-    const resetTime = res.getHeader('RateLimit-Reset') as string;
-    const retryAfter = resetTime ? Math.max(0, Math.round((parseInt(resetTime) * 1000 - Date.now()) / 1000)) : 60;
-    
+    const resetTime = res.getHeader('RateLimit-Reset') as string
+    const retryAfter = resetTime
+      ? Math.max(0, Math.round((parseInt(resetTime) * 1000 - Date.now()) / 1000))
+      : 60
+
     res.status(429).json({
       error: 'rate_limit_exceeded',
       message: `Too many ${context} requests. Please try again later.`,
-      retryAfter
-    });
-  };
+      retryAfter,
+    })
+  }
 }
 
 /**
@@ -114,11 +125,11 @@ export const generalRateLimit = rateLimit({
   max: 1000, // Limit each IP to 1000 requests per windowMs
   message: {
     error: 'rate_limit_exceeded',
-    message: 'Too many requests from this IP, please try again later.'
+    message: 'Too many requests from this IP, please try again later.',
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
+})
 
 /**
  * Strict rate limiter for login endpoints
@@ -131,7 +142,7 @@ export const loginRateLimit = rateLimit({
   handler: createRateLimitHandler('login'),
   standardHeaders: true,
   legacyHeaders: false,
-});
+})
 
 /**
  * Moderate rate limiter for refresh token endpoints
@@ -144,7 +155,7 @@ export const refreshRateLimit = rateLimit({
   handler: createRateLimitHandler('token refresh'),
   standardHeaders: true,
   legacyHeaders: false,
-});
+})
 
 /**
  * Strict rate limiter for registration endpoints
@@ -157,7 +168,7 @@ export const registrationRateLimit = rateLimit({
   handler: createRateLimitHandler('registration'),
   standardHeaders: true,
   legacyHeaders: false,
-});
+})
 
 /**
  * Very strict rate limiter for admin endpoints
@@ -169,25 +180,26 @@ export const adminRateLimit = rateLimit({
   handler: createRateLimitHandler('admin'),
   standardHeaders: true,
   legacyHeaders: false,
-});
+})
 
 /**
  * Brute force protection middleware
  * Checks for account lockouts before processing login requests
  */
 export function bruteForceProtection(req: Request, res: Response, next: Function) {
-  const ip = req.ip || req.connection.remoteAddress || 'unknown';
-  const email = req.body?.email;
-  
+  const ip = req.ip || req.connection.remoteAddress || 'unknown'
+  const email = req.body?.email
+
   if (isLockedOut(ip, email)) {
     return res.status(429).json({
       error: 'account_locked',
-      message: 'Account temporarily locked due to too many failed login attempts. Please try again later.',
-      lockoutActive: true
-    });
+      message:
+        'Account temporarily locked due to too many failed login attempts. Please try again later.',
+      lockoutActive: true,
+    })
   }
-  
-  next();
+
+  next()
 }
 
 /**
@@ -196,24 +208,24 @@ export function bruteForceProtection(req: Request, res: Response, next: Function
  */
 export function recordLoginAttempt(success: boolean) {
   return (req: Request, res: Response, next: Function) => {
-    const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    const email = req.body?.email;
-    
+    const ip = req.ip || req.connection.remoteAddress || 'unknown'
+    const email = req.body?.email
+
     if (success) {
-      clearFailedAttempts(ip, email);
+      clearFailedAttempts(ip, email)
     } else {
-      const result = recordFailedAttempt(ip, email);
+      const result = recordFailedAttempt(ip, email)
       if (result.locked) {
         // Add lockout info to response if this attempt triggered a lockout
         if (res.headersSent) {
-          console.warn('Headers already sent, cannot add lockout info');
+          console.warn('Headers already sent, cannot add lockout info')
         } else {
-          res.locals.lockoutTriggered = true;
-          res.locals.lockoutDuration = result.lockoutDuration;
+          res.locals.lockoutTriggered = true
+          res.locals.lockoutDuration = result.lockoutDuration
         }
       }
     }
-    
-    next();
-  };
+
+    next()
+  }
 }
