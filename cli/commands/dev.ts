@@ -42,7 +42,7 @@ devCommands
       
       if (existingAdmin.length === 0) {
         console.log('   No admin user found. Creating default admin...');
-        const bcrypt = await import('bcrypt');
+        const bcrypt = await import('bcryptjs');
         
         const defaultPassword = 'admin123';
         const passwordHash = await bcrypt.hash(defaultPassword, 12);
@@ -90,7 +90,7 @@ devCommands
       const { db } = await import('../../src/db');
       const { users } = await import('../../src/db/schema');
       const { eq } = await import('drizzle-orm');
-      const bcrypt = await import('bcrypt');
+      const bcrypt = await import('bcryptjs');
 
       // Check if user exists
       const existing = await db.select().from(users).where(eq(users.email, options.email)).limit(1);

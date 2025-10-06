@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { db } from '../../src/db';
 import { users } from '../../src/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import * as readline from 'readline';
 
 // Helper function to prompt for confirmation
