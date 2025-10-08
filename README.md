@@ -579,13 +579,23 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 
 ### Database Schema
 
+**Tenants Table:**
+
+- `id` (String, Primary Key, max 50 chars)
+- `name` (String, Tenant display name)
+- `domain` (String, Optional domain restriction)
+- `isActive` (Boolean, Tenant status)
+- `createdAt` (Timestamp)
+- `updatedAt` (Timestamp)
+- `settings` (JSONB, Tenant-specific configuration)
+
 **Users Table:**
 
 - `id` (UUID, Primary Key)
 - `email` (String, Unique per tenant)
 - `passwordHash` (String, bcrypt)
 - `role` (Enum: user, admin)
-- `tenantId` (String, for multi-tenancy)
+- `tenantId` (String, Foreign Key to tenants)
 - `tokenVersion` (Integer, for token invalidation)
 - `createdAt` (Timestamp)
 
