@@ -41,7 +41,7 @@ async function testAdvancedFlow() {
   logTestResult(loginResult)
 
   if (loginResult.success) {
-    loginData = loginResult.data
+    loginData = loginResult.data.data
     console.log(`   Access Token Length: ${loginData.accessToken?.length}`)
     console.log(`   Refresh Token: ${loginData.refreshToken?.substring(0, 20)}...`)
   }
@@ -54,7 +54,7 @@ async function testAdvancedFlow() {
   logTestResult(refreshResult)
 
   if (refreshResult.success) {
-    refreshData = refreshResult.data
+    refreshData = refreshResult.data.data
     console.log(`   New Access Token Length: ${refreshData.accessToken?.length}`)
     console.log(`   New Refresh Token: ${refreshData.refreshToken?.substring(0, 20)}...`)
   }

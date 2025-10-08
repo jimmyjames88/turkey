@@ -54,10 +54,10 @@ async function testBasicEndpoints() {
 
   // If login was successful, test token-based endpoints
   const loginResult = results.find(r => r.endpoint === '/v1/auth/login')
-  if (loginResult?.success && loginResult.data?.refreshToken) {
+  if (loginResult?.success && loginResult.data?.data?.refreshToken) {
     console.log('🔐 Testing authenticated endpoints...\n')
 
-    const refreshToken = loginResult.data.refreshToken
+    const refreshToken = loginResult.data.data.refreshToken
 
     // Test refresh endpoint
     const refreshResult = await testEndpoint('/v1/auth/refresh', 'POST', {

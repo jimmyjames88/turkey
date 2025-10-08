@@ -31,8 +31,8 @@ async function testAuthenticationMiddleware() {
     tenantId: 'tenant_authtest',
   })
 
-  if (userLoginResult.status === 200 && userLoginResult.data?.accessToken) {
-    userToken = userLoginResult.data.accessToken
+  if (userLoginResult.status === 200 && userLoginResult.data?.data?.accessToken) {
+    userToken = userLoginResult.data.data.accessToken
     console.log(`   User login: SUCCESS (token length: ${userToken.length})`)
   } else {
     console.log(`   User login: FAILED (${userLoginResult.status})`)
@@ -59,8 +59,8 @@ async function testAuthenticationMiddleware() {
     tenantId: 'tenant_admin',
   })
 
-  if (adminLoginResult.status === 200 && adminLoginResult.data?.accessToken) {
-    adminToken = adminLoginResult.data.accessToken
+  if (adminLoginResult.status === 200 && adminLoginResult.data?.data?.accessToken) {
+    adminToken = adminLoginResult.data.data.accessToken
     console.log(`   Admin login: SUCCESS (token length: ${adminToken.length})`)
   } else {
     console.log(`   Admin login: FAILED (${adminLoginResult.status})`)

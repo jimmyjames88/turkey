@@ -29,11 +29,11 @@ async function testRefreshTokenRateLimit() {
     `   Login: ${loginResult.status === 200 ? 'SUCCESS' : 'FAILED'} (${loginResult.status})`
   )
 
-  if (loginResult.status === 200 && loginResult.data?.refreshToken) {
+  if (loginResult.status === 200 && loginResult.data?.data?.refreshToken) {
     console.log('3. Testing refresh token...')
 
     const refreshResult = await testEndpoint('/v1/auth/refresh', 'POST', {
-      refreshToken: loginResult.data.refreshToken,
+      refreshToken: loginResult.data.data.refreshToken,
     })
 
     console.log(

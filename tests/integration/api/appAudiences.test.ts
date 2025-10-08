@@ -31,9 +31,9 @@ async function testAppAudiences() {
 
       const result = await testEndpoint('/v1/auth/login', 'POST', loginData)
 
-      if (result.success && result.data?.accessToken) {
+      if (result.success && result.data?.data?.accessToken) {
         // Decode JWT to verify audience (basic decode, no verification)
-        const base64Payload = result.data.accessToken.split('.')[1]
+        const base64Payload = result.data.data.accessToken.split('.')[1]
         const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString())
 
         if (payload.aud === 'my_blog') {
@@ -77,10 +77,10 @@ async function testAppAudiences() {
       if (photosLogin.success && financeLogin.success) {
         // Decode both tokens
         const photosPayload = JSON.parse(
-          Buffer.from(photosLogin.data.accessToken.split('.')[1], 'base64').toString()
+          Buffer.from(photosLogin.data.data.accessToken.split('.')[1], 'base64').toString()
         )
         const financePayload = JSON.parse(
-          Buffer.from(financeLogin.data.accessToken.split('.')[1], 'base64').toString()
+          Buffer.from(financeLogin.data.data.accessToken.split('.')[1], 'base64').toString()
         )
 
         if (photosPayload.aud === 'my_photos' && financePayload.aud === 'my_finance') {
@@ -127,9 +127,9 @@ async function testAppAudiences() {
         // No audience specified
       })
 
-      if (result.success && result.data?.accessToken) {
+      if (result.success && result.data?.data?.accessToken) {
         const payload = JSON.parse(
-          Buffer.from(result.data.accessToken.split('.')[1], 'base64').toString()
+          Buffer.from(result.data.data.accessToken.split('.')[1], 'base64').toString()
         )
 
         // Should use default audience (turkey or configured value)
@@ -187,16 +187,16 @@ async function testAppAudiences() {
         audience: 'my_blog',
       })
 
-      if (loginResult.success && loginResult.data?.refreshToken) {
+      if (loginResult.success && loginResult.data?.data?.refreshToken) {
         // Refresh with same audience
         const refreshResult = await testEndpoint('/v1/auth/refresh', 'POST', {
-          refreshToken: loginResult.data.refreshToken,
+          refreshToken: loginResult.data.data.refreshToken,
           audience: 'my_blog',
         })
 
-        if (refreshResult.success && refreshResult.data?.accessToken) {
+        if (refreshResult.success && refreshResult.data?.data?.accessToken) {
           const payload = JSON.parse(
-            Buffer.from(refreshResult.data.accessToken.split('.')[1], 'base64').toString()
+            Buffer.from(refreshResult.data.data.accessToken.split('.')[1], 'base64').toString()
           )
 
           if (payload.aud === 'my_blog') {
@@ -239,9 +239,9 @@ async function testAppAudiences() {
           audience: 'my_finance',
         })
 
-        if (loginResult.success && loginResult.data?.accessToken) {
+        if (loginResult.success && loginResult.data?.data?.accessToken) {
           const payload = JSON.parse(
-            Buffer.from(loginResult.data.accessToken.split('.')[1], 'base64').toString()
+            Buffer.from(loginResult.data.data.accessToken.split('.')[1], 'base64').toString()
           )
 
           if (payload.aud === 'my_finance') {
@@ -258,9 +258,9 @@ async function testAppAudiences() {
         return loginResult
       }
 
-      if (result.success && result.data?.accessToken) {
+      if (result.success && result.data?.data?.accessToken) {
         const payload = JSON.parse(
-          Buffer.from(result.data.accessToken.split('.')[1], 'base64').toString()
+          Buffer.from(result.data.data.accessToken.split('.')[1], 'base64').toString()
         )
 
         if (payload.aud === 'my_finance') {

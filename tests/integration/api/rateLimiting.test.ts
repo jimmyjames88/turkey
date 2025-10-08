@@ -133,22 +133,22 @@ async function testRateLimiting() {
   })
 
   let refreshSuccess = false
-  if (loginForRefresh.status === 200 && loginForRefresh.data?.refreshToken) {
+  if (loginForRefresh.status === 200 && loginForRefresh.data?.data?.refreshToken) {
     // Try a few refresh attempts
     let refreshAttempts = 0
     let successfulRefreshes = 0
 
     for (let i = 0; i < 3; i++) {
       const refreshResult = await testEndpoint('/v1/auth/refresh', 'POST', {
-        refreshToken: loginForRefresh.data.refreshToken,
+        refreshToken: loginForRefresh.data.data.refreshToken,
       })
 
       refreshAttempts++
       if (refreshResult.status === 200) {
         successfulRefreshes++
         // Update refresh token for next attempt
-        if (refreshResult.data?.refreshToken) {
-          loginForRefresh.data.refreshToken = refreshResult.data.refreshToken
+        if (refreshResult.data?.data?.refreshToken) {
+          loginForRefresh.data.data.refreshToken = refreshResult.data.data.refreshToken
         }
       }
 
