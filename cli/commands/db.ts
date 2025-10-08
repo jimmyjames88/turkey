@@ -108,3 +108,71 @@ dbCommands
       process.exit(1)
     }
   })
+
+// Generate database migrations
+dbCommands
+  .command('generate')
+  .description('Generate database migrations from schema changes')
+  .action(async () => {
+    try {
+      console.log('📝 Generating database migrations...')
+
+      const { spawn } = await import('child_process')
+
+      // Run drizzle-kit generate:pg
+      const child = spawn('npx', ['drizzle-kit', 'generate:pg'], {
+        stdio: 'inherit',
+        shell: true,
+      })
+
+      child.on('close', code => {
+        if (code === 0) {
+          console.log('✅ Database migrations generated successfully')
+          process.exit(0)
+        } else {
+          console.error('❌ Migration generation failed')
+          process.exit(1)
+        }
+      })
+    } catch (error) {
+      console.error(
+        '❌ Migration generation failed:',
+        error instanceof Error ? error.message : error
+      )
+      process.exit(1)
+    }
+  })
+
+// Open database studio
+dbCommands
+  .command('studio')
+  .description('Open Drizzle Studio for database management')
+  .action(async () => {
+    try {
+      console.log('🎨 Opening Drizzle Studio...')
+
+      const { spawn } = await import('child_process')
+
+      // Run drizzle-kit studio
+      const child = spawn('npx', ['drizzle-kit', 'studio'], {
+        stdio: 'inherit',
+        shell: true,
+      })
+
+      child.on('close', code => {
+        if (code === 0) {
+          console.log('✅ Drizzle Studio closed')
+          process.exit(0)
+        } else {
+          console.error('❌ Drizzle Studio failed to start')
+          process.exit(1)
+        }
+      })
+    } catch (error) {
+      console.error(
+        '❌ Failed to open Drizzle Studio:',
+        error instanceof Error ? error.message : error
+      )
+      process.exit(1)
+    }
+  })
