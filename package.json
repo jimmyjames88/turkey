@@ -20,12 +20,8 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:db:create": "ts-node tests/scripts/setupTestDatabase.ts",
-    "test:db:reset": "ts-node tests/scripts/resetTestDatabase.ts",
-    "test:db:verify": "NODE_ENV=test ts-node tests/scripts/verifyTestDatabase.ts",
     "test:integration": "NODE_ENV=test ts-node tests/integration/index.ts",
     "clean": "rimraf dist",
-    "cli": "ts-node cli/gravy.ts",
     "gravy": "ts-node cli/gravy.ts",
     "prepare": "husky"
   },
