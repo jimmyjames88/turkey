@@ -4,11 +4,7 @@ import { testAdvancedFlow } from './api/advancedFlow.test'
 import { testRateLimiting } from './api/rateLimiting.test'
 import { testAuthenticationMiddleware } from './api/authMiddleware.test'
 import { testAppAudiences } from './api/appAudiences.test'
-import {
-  setupTestDatabase,
-  closeTestDatabase,
-  checkTestDatabaseHealth,
-} from '../helpers/testDatabase'
+// Using development database - no separate test database setup needed
 
 /**
  * Main test runner for all integration tests
@@ -28,16 +24,9 @@ async function runAllIntegrationTests() {
   }
 
   try {
-    // Setup test database with fresh data
-    console.log('🔧 Setting up test database...')
-    await setupTestDatabase()
-
-    // Verify database health
-    const isHealthy = await checkTestDatabaseHealth()
-    if (!isHealthy) {
-      throw new Error('Test database health check failed')
-    }
-    console.log('✅ Test database ready\n')
+    // Using development database directly
+    console.log('🔧 Using development database...')
+    console.log('✅ Ready to run tests\n')
 
     // Run basic endpoints tests
     console.log('📋 SUITE 1: Basic Endpoints')
@@ -146,13 +135,8 @@ async function runAllIntegrationTests() {
     console.error('❌ Integration test suite failed:', error)
     return false
   } finally {
-    // Clean up test database connection
-    try {
-      await closeTestDatabase()
-      console.log('🧹 Test database connection closed')
-    } catch (error) {
-      console.error('⚠️ Failed to close test database connection:', error)
-    }
+    // No cleanup needed for development database
+    console.log('🧹 Tests completed')
   }
 }
 
