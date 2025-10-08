@@ -82,32 +82,37 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
 ## 📁 Project Structure
 
 ```
-src/
-├── config/              # Configuration and environment variables
-│   └── index.ts         # Centralized configuration management
-├── db/                  # Database layer
-│   ├── schema.ts        # Drizzle ORM schema definitions
-│   ├── index.ts         # Database connection setup
-│   ├── migrate.ts       # Migration runner
-│   └── migrations/      # Database migration files
-├── middleware/          # Express middleware
-│   ├── auth.ts          # JWT authentication and authorization
-│   ├── rateLimiting.ts  # Rate limiting and brute force protection
-│   ├── validation.ts    # Input validation and sanitization
-│   └── errorHandling.ts # Global error handling and responses
-├── routes/              # API route handlers
-│   ├── auth.ts          # Authentication endpoints
-│   ├── users.ts         # User management endpoints
-│   └── wellKnown.ts     # JWKS and discovery endpoints
-├── services/            # Business logic services
-│   ├── tokenService.ts        # JWT token creation and validation
-│   ├── refreshTokenService.ts # Refresh token management
-│   ├── passwordService.ts     # Password hashing and validation
-│   ├── keyService.ts          # Cryptographic key management
-│   └── jwksService.ts         # JSON Web Key Set generation
-├── types/               # TypeScript type definitions
-│   └── index.ts         # Shared type definitions
-└── index.ts             # Application entry point
+├── cli/                 # Gravy CLI commands
+├── migrations/          # Database migration files
+├── public/              # Static assets (logo)
+├── src/
+│   ├── config/          # Configuration and environment variables
+│   │   └── index.ts     # Centralized configuration management
+│   ├── db/              # Database layer
+│   │   ├── schema.ts    # Drizzle ORM schema definitions
+│   │   ├── index.ts     # Database connection setup
+│   │   └── migrate.ts   # Migration runner
+│   ├── middleware/      # Express middleware
+│   │   ├── auth.ts      # JWT authentication and authorization
+│   │   ├── rateLimiting.ts # Rate limiting and brute force protection
+│   │   ├── validation.ts # Input validation and sanitization
+│   │   └── errorHandling.ts # Global error handling and responses
+│   ├── routes/          # API route handlers
+│   │   ├── auth.ts      # Authentication endpoints
+│   │   ├── users.ts     # User management endpoints
+│   │   └── wellKnown.ts # JWKS and discovery endpoints
+│   ├── services/        # Business logic services
+│   │   ├── tokenService.ts        # JWT token creation and validation
+│   │   ├── refreshTokenService.ts # Refresh token management
+│   │   ├── passwordService.ts     # Password hashing and validation
+│   │   ├── keyService.ts          # Cryptographic key management
+│   │   └── jwksService.ts         # JSON Web Key Set generation
+│   ├── types/           # TypeScript type definitions
+│   │   └── index.ts     # Shared type definitions
+│   ├── utils/           # Utility functions
+│   └── index.ts         # Application entry point
+├── tests/               # Test suite
+└── gravy                # CLI executable
 ```
 
 ## 🌐 API Documentation
