@@ -102,7 +102,17 @@ router.post(
     // Record successful login
     recordLoginAttempt(true)(req, res, () => {})
 
-    res.json(tokenPair)
+    res.json({
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          tenantId: user.tenantId,
+        },
+        ...tokenPair,
+      },
+    })
   })
 )
 
@@ -136,7 +146,9 @@ router.post(
     // Rotate refresh token
     await rotateRefreshToken(storedToken.id, newTokenPair.refreshToken, user.id, user.tenantId)
 
-    res.json(newTokenPair)
+    res.json({
+      data: newTokenPair,
+    })
   })
 )
 
@@ -241,13 +253,15 @@ router.post(
     await storeRefreshToken(tokenPair.refreshToken, newUser.id, newUser.tenantId)
 
     res.status(201).json({
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        role: newUser.role,
-        tenantId: newUser.tenantId,
+      data: {
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          role: newUser.role,
+          tenantId: newUser.tenantId,
+        },
+        ...tokenPair,
       },
-      ...tokenPair,
     })
   })
 )
