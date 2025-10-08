@@ -1,5 +1,11 @@
 <p align="center">
-  <img src="./public/turkey-logo.svg" alt="Turkey" width="300" >
+  <img src="./public/turkey-logo.svg" alt="5. **Start development server:**
+
+```bash
+npm run dev
+```
+
+6. **Verify installation:** width="300" >
 </p>
 
 # 🦃 TurKey Auth API
@@ -54,13 +60,20 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
    npm run db:migrate
    ```
 
-4. **Start development server:**
+4. **Create initial tenant (required):**
+
+   ```bash
+   # Create a tenant for your application
+   ./gravy tenant:create -i your_app -n "Your App Name"
+   ```
+
+5. **Start development server:**
 
    ```bash
    npm run dev
    ```
 
-5. **Verify installation:**
+6. **Verify installation:**
    ```bash
    curl http://localhost:3000/health
    # Should return: {"status":"ok","timestamp":"...","version":"1.0.0"}
