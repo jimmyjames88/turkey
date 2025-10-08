@@ -1,8 +1,8 @@
 import fetch from 'node-fetch'
-import { db } from '../../src/db'
+import { testDb } from './testDatabase'
 import { tenants } from '../../src/db/schema'
 
-const BASE_URL = process.env.TEST_API_URL || 'http://localhost:3000'
+const BASE_URL = process.env.TEST_API_URL || 'http://localhost:3001'
 
 export interface TestResult {
   endpoint: string
@@ -70,7 +70,7 @@ export function logTestResult(result: TestResult): void {
 export async function createTestTenant(tenantId: string, name?: string): Promise<TestResult> {
   try {
     // Create tenant directly in database
-    await db.insert(tenants).values({
+    await testDb.insert(tenants).values({
       id: tenantId,
       name: name || `Test Tenant ${tenantId}`,
       domain: null,
