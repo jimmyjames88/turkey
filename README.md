@@ -31,7 +31,7 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
 1. **Clone and install dependencies:**
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/jimmyjames88/turkey
    cd turkey
    npm install
    ```
