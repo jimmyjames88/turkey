@@ -22,13 +22,14 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL 13+
 - npm or yarn
 
 ### Installation
 
 1. **Clone and install dependencies:**
+
    ```bash
    git clone <repository-url>
    cd turkey
@@ -36,22 +37,25 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
    ```
 
 2. **Set up environment:**
+
    ```bash
    cp .env.example .env
    # Edit .env with your database credentials and settings
    ```
 
 3. **Set up database:**
+
    ```bash
    # Create PostgreSQL database
    createdb turkey_dev
-   
+
    # Generate and run migrations
    npm run db:generate
    npm run db:migrate
    ```
 
 4. **Start development server:**
+
    ```bash
    npm run dev
    ```
@@ -96,6 +100,7 @@ src/
 ## 🌐 API Documentation
 
 ### Base URL
+
 ```
 Development: http://localhost:3000
 Production: https://your-domain.com
@@ -104,6 +109,7 @@ Production: https://your-domain.com
 ### Authentication
 
 All protected endpoints require a Bearer token in the Authorization header:
+
 ```
 Authorization: Bearer <access_token>
 ```
@@ -127,6 +133,7 @@ Authorization: Bearer <access_token>
 Register a new user account.
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -137,12 +144,14 @@ Register a new user account.
 ```
 
 **Validation Rules:**
+
 - `email`: Valid email format
 - `password`: Min 8 chars, must contain uppercase, lowercase, number, and special character
 - `tenantId`: 1-50 alphanumeric characters, underscores, and hyphens
 - `role`: Either "user" or "admin"
 
 **Success Response (201):**
+
 ```json
 {
   "user": {
@@ -157,6 +166,7 @@ Register a new user account.
 ```
 
 **Error Responses:**
+
 - `400` - Validation error or weak password
 - `409` - User already exists in tenant
 - `429` - Rate limit exceeded
@@ -168,6 +178,7 @@ Register a new user account.
 Authenticate user and receive tokens.
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -177,6 +188,7 @@ Authenticate user and receive tokens.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "accessToken": "eyJ...",
@@ -185,11 +197,13 @@ Authenticate user and receive tokens.
 ```
 
 **Error Responses:**
+
 - `400` - Invalid request data
 - `401` - Invalid credentials
 - `429` - Rate limit exceeded or account locked
 
 **Rate Limits:**
+
 - 5 attempts per 15 minutes per IP
 - Account lockout after 5 failed attempts
 
@@ -200,6 +214,7 @@ Authenticate user and receive tokens.
 Refresh access token using refresh token.
 
 **Request Body:**
+
 ```json
 {
   "refreshToken": "rt_..."
@@ -207,6 +222,7 @@ Refresh access token using refresh token.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "accessToken": "eyJ...",
@@ -215,11 +231,13 @@ Refresh access token using refresh token.
 ```
 
 **Error Responses:**
+
 - `400` - Invalid request data
 - `401` - Invalid or expired refresh token
 - `429` - Rate limit exceeded
 
 **Rate Limits:**
+
 - 10 attempts per minute per IP
 
 ---
@@ -229,6 +247,7 @@ Refresh access token using refresh token.
 Revoke current refresh token.
 
 **Request Body:**
+
 ```json
 {
   "refreshToken": "rt_..."
@@ -236,6 +255,7 @@ Revoke current refresh token.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "Logged out successfully"
@@ -249,6 +269,7 @@ Revoke current refresh token.
 Revoke all refresh tokens for user (logout from all devices).
 
 **Request Body:**
+
 ```json
 {
   "refreshToken": "rt_..."
@@ -256,6 +277,7 @@ Revoke all refresh tokens for user (logout from all devices).
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "message": "Logged out from all devices"
@@ -267,16 +289,18 @@ Revoke all refresh tokens for user (logout from all devices).
 ## 👤 User Management Endpoints
 
 ### GET /v1/users/me
+
 **🔒 Requires Authentication**
 
 Get current user profile.
 
 **Success Response (200):**
+
 ```json
 {
   "user": {
     "id": "uuid",
-    "email": "user@example.com", 
+    "email": "user@example.com",
     "role": "user",
     "tenantId": "tenant_001",
     "createdAt": "2025-10-01T00:00:00.000Z"
@@ -293,18 +317,20 @@ Get current user profile.
 ---
 
 ### GET /v1/users/profile
+
 **🔒 Requires Authentication (User or Admin)**
 
 Alternative profile endpoint demonstrating role-based access.
 
 **Success Response (200):**
+
 ```json
 {
   "message": "This endpoint requires user or admin role",
   "user": {
     "id": "uuid",
     "email": "user@example.com",
-    "role": "user", 
+    "role": "user",
     "tenantId": "tenant_001"
   }
 }
@@ -313,11 +339,13 @@ Alternative profile endpoint demonstrating role-based access.
 ---
 
 ### GET /v1/users/admin-only
+
 **🔒 Requires Authentication (Admin Only)**
 
 Admin-only test endpoint.
 
 **Success Response (200):**
+
 ```json
 {
   "message": "This endpoint requires admin role",
@@ -327,26 +355,24 @@ Admin-only test endpoint.
     "role": "admin",
     "tenantId": "tenant_001"
   },
-  "adminCapabilities": [
-    "user_management",
-    "key_rotation", 
-    "audit_access",
-    "system_configuration"
-  ]
+  "adminCapabilities": ["user_management", "key_rotation", "audit_access", "system_configuration"]
 }
 ```
 
 **Error Responses:**
+
 - `403` - Insufficient permissions (user role trying to access admin endpoint)
 
 ---
 
 ### GET /v1/users/tenant-info
+
 **🔒 Requires Authentication**
 
 Get information about current user's tenant (demonstrates tenant isolation).
 
 **Success Response (200):**
+
 ```json
 {
   "tenantId": "tenant_001",
@@ -370,11 +396,13 @@ Get information about current user's tenant (demonstrates tenant isolation).
 ---
 
 ### POST /v1/users/test-auth
+
 **🔒 Requires Authentication**
 
 Test endpoint to verify token parsing and validation.
 
 **Success Response (200):**
+
 ```json
 {
   "message": "Authentication successful!",
@@ -403,12 +431,13 @@ Test endpoint to verify token parsing and validation.
 Returns the JSON Web Key Set for public key verification.
 
 **Success Response (200):**
+
 ```json
 {
   "keys": [
     {
       "kty": "EC",
-      "use": "sig", 
+      "use": "sig",
       "alg": "ES256",
       "kid": "key_abc123",
       "x": "base64url_encoded_x_coordinate",
@@ -419,6 +448,7 @@ Returns the JSON Web Key Set for public key verification.
 ```
 
 **Headers:**
+
 - `Cache-Control: public, max-age=900, stale-while-revalidate=300`
 - `Content-Type: application/json`
 
@@ -429,10 +459,11 @@ Returns the JSON Web Key Set for public key verification.
 Health check endpoint.
 
 **Success Response (200):**
+
 ```json
 {
   "status": "ok",
-  "timestamp": "2025-10-01T00:00:00.000Z", 
+  "timestamp": "2025-10-01T00:00:00.000Z",
   "version": "1.0.0"
 }
 ```
@@ -441,13 +472,13 @@ Health check endpoint.
 
 ### Rate Limiting
 
-| Endpoint | Limit | Window |
-|----------|-------|--------|
-| `/v1/auth/login` | 5 requests | 15 minutes |
-| `/v1/auth/refresh` | 10 requests | 1 minute |
-| `/v1/auth/register` | 3 requests | 15 minutes |
-| Admin endpoints | 20 requests | 1 minute |
-| General API | 100 requests | 15 minutes |
+| Endpoint            | Limit        | Window     |
+| ------------------- | ------------ | ---------- |
+| `/v1/auth/login`    | 5 requests   | 15 minutes |
+| `/v1/auth/refresh`  | 10 requests  | 1 minute   |
+| `/v1/auth/register` | 3 requests   | 15 minutes |
+| Admin endpoints     | 20 requests  | 1 minute   |
+| General API         | 100 requests | 15 minutes |
 
 ### Brute Force Protection
 
@@ -507,7 +538,7 @@ NODE_ENV=development|production
 PORT=3000
 DATABASE_URL=postgresql://user:password@localhost:5432/turkey_dev
 
-# JWT Configuration  
+# JWT Configuration
 JWT_ISSUER=https://your-domain.com
 JWT_AUDIENCE=your-api-audience
 ACCESS_TOKEN_TTL=900        # 15 minutes
@@ -531,6 +562,7 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 ### Database Schema
 
 **Users Table:**
+
 - `id` (UUID, Primary Key)
 - `email` (String, Unique per tenant)
 - `passwordHash` (String, bcrypt)
@@ -540,6 +572,7 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 - `createdAt` (Timestamp)
 
 **Refresh Tokens Table:**
+
 - `id` (UUID, Primary Key)
 - `userId` (UUID, Foreign Key)
 - `tenantId` (String)
@@ -549,6 +582,7 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 - `revokedAt` (Timestamp, nullable)
 
 **Keys Table:**
+
 - `id` (UUID, Primary Key)
 - `kid` (String, Key ID)
 - `alg` (String, Algorithm)
@@ -595,3 +629,160 @@ ISC License
 - [ ] Set up monitoring and alerting
 - [ ] Configure key rotation schedule
 - [ ] Set up database backups
+
+# 🍗 Gravy CLI Commands
+
+Gravy is the command-line interface for managing your Turkey authentication service. Everything's smooth as gravy!
+
+## Usage
+
+From the Turkey project root directory:
+
+```bash
+./gravy <command>
+```
+
+## Available Commands
+
+### 🏢 Tenant Management
+
+```bash
+# List all tenants
+./gravy tenant:list
+
+# Show detailed tenant information
+./gravy tenant:show <tenant-id>
+```
+
+### 👥 User Management
+
+```bash
+# Create a new user
+./gravy user:create -e user@example.com -p password123 -t default -r user
+
+# List users (with optional filters)
+./gravy user:list
+./gravy user:list -t default
+./gravy user:list -r admin
+./gravy user:list -t default -r user -l 10
+
+# Delete a user (with confirmation)
+./gravy user:delete <user-id>
+./gravy user:delete <user-id> --yes
+
+# Find users by email address
+./gravy user:find <email>
+./gravy user:find <email> --exact
+./gravy user:find <email> --tenant tenant_001
+./gravy user:find <email> --role admin
+./gravy user:find <email> --tenant tenant_001 --role user --exact
+```
+
+### 🗄️ Database Management
+
+```bash
+# Run database migrations
+./gravy db:migrate
+
+# Check database health
+./gravy db:health
+
+# Show database statistics
+./gravy db:stats
+```
+
+### 🔑 Token Management
+
+```bash
+# Decode and inspect a JWT token
+./gravy token:verify <jwt-token>
+./gravy token:verify <jwt-token> --verbose
+
+# List refresh tokens
+./gravy token:list-refresh
+./gravy token:list-refresh -u <user-id>
+./gravy token:list-refresh -t <tenant-id>
+./gravy token:list-refresh --active-only
+```
+
+### 🚀 Development Commands
+
+```bash
+# Setup development environment (migrations, keys, admin user)
+./gravy dev:setup
+
+# Create a test user for development
+./gravy dev:create-test-user
+./gravy dev:create-test-user -e test@example.com -p test123
+
+# Comprehensive health check
+./gravy dev:health
+```
+
+## Examples
+
+### Quick Development Setup
+
+```bash
+# Initialize everything for development
+./gravy dev:setup
+
+# Create some test users
+./gravy dev:create-test-user -e alice@example.com -p alice123
+./gravy dev:create-test-user -e bob@example.com -p bob123 -r admin
+
+# List all users
+./gravy user:list
+
+# Check system health
+./gravy dev:health
+```
+
+### Production User Management
+
+```bash
+# Create admin user
+./gravy user:create -e admin@company.com -p secure-password -r admin
+
+# List all admin users
+./gravy user:list -r admin
+
+# Check database stats
+./gravy db:stats
+```
+
+### User Search & Management
+
+```bash
+# Find users by partial email match
+./gravy user:find test
+./gravy user:find @company.com
+
+# Find exact email match
+./gravy user:find admin@company.com --exact
+
+# Find users in specific tenant
+./gravy user:find alice --tenant production
+
+# Find admin users with partial email
+./gravy user:find support --role admin
+
+# Complex search: exact email in specific tenant
+./gravy user:find support@company.com --exact --tenant production --role admin
+
+# Delete user safely (with confirmation)
+./gravy user:delete <user-id>
+
+# Delete user in scripts (skip confirmation)
+./gravy user:delete <user-id> --yes
+```
+
+### Token Debugging
+
+```bash
+# Inspect a token
+./gravy token:verify eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9... --verbose
+
+# List active refresh tokens for a user
+./gravy token:list-refresh -u <user-id> --active-only
+```
