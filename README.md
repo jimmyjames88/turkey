@@ -657,6 +657,7 @@ ISC License
 - [ ] Set up monitoring and alerting
 - [ ] Configure key rotation schedule
 - [ ] Set up database backups
+- [ ] Create initial tenants with `./gravy tenant:create`
 
 # 🍗 Gravy CLI Commands
 
