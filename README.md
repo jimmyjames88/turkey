@@ -16,7 +16,7 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
 - **🧹 Input Validation & Sanitization** - XSS protection with Zod schemas and DOMPurify
 - **📊 Standardized Error Handling** - Consistent error responses with detailed error codes
 - **🎯 Role-based Access Control** - User and admin role management
-- **🧪 100% Test Coverage** - Comprehensive integration test suite (29/29 tests passing)
+- **🧪 100% Test Coverage** - Comprehensive integration test suite (35/35 tests passing)
 
 ## 🚀 Quick Start
 
@@ -50,8 +50,8 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
    createdb turkey_dev
 
    # Generate and run migrations
-   npm run db:generate
-   npm run db:migrate
+   ./gravy db:generate
+   ./gravy db:migrate
    ```
 
 4. **Create initial tenant (required):**
@@ -526,19 +526,18 @@ npm run dev              # Start development server with hot reload
 npm run build           # Build for production
 npm start              # Start production server
 
-# Database
-npm run db:generate     # Generate database migrations
-npm run db:migrate      # Run database migrations
-npm run db:studio       # Open Drizzle Studio (DB GUI)
+# Database (via Gravy CLI)
+./gravy db:generate     # Generate database migrations
+./gravy db:migrate      # Run database migrations
+./gravy db:studio       # Open Drizzle Studio (DB GUI)
 
 # Testing
-npm test               # Run Jest unit tests
-npm run test:watch     # Run tests in watch mode
-npm run test:integration # Run integration tests (29/29 passing)
+npm run test:integration # Run integration tests (35/35 passing)
 
 # Code Quality
 npm run lint           # Run ESLint
 npm run lint:fix       # Fix ESLint issues
+npm run format         # Format code with Prettier
 npm run clean          # Clean build directory
 ```
 
@@ -624,7 +623,7 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 
 ## 🧪 Testing
 
-The API includes a comprehensive test suite with 29 integration tests covering:
+The API includes a comprehensive test suite with 35 integration tests covering:
 
 - ✅ Basic API endpoints
 - ✅ Authentication flows
@@ -633,6 +632,7 @@ The API includes a comprehensive test suite with 29 integration tests covering:
 - ✅ Role-based access control
 - ✅ Token validation and refresh
 - ✅ Tenant isolation
+- ✅ App-specific JWT audiences
 
 ## 📝 License
 
