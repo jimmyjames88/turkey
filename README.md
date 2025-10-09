@@ -2,7 +2,7 @@
   <img src="./public/turkey-logo.svg" width="300" />
 </p>
 
-# 🦃 TurKey Auth API
+# TurKey Auth API
 
 A production-ready JWT authentication service with ES256 signing, JWKS support, refresh token rotation, and comprehensive security features.
 
@@ -18,7 +18,7 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
 - **🎯 Role-based Access Control** - User and admin role management
 - **🧪 100% Test Coverage** - Comprehensive integration test suite (35/35 tests passing)
 
-## � Turkey SDK
+## 🦃 Turkey SDK
 
 For easy integration with your applications, use the official Turkey SDK:
 
@@ -30,7 +30,7 @@ The SDK provides TypeScript-first client libraries with built-in token managemen
 
 **🔗 [View Turkey SDK Documentation →](https://github.com/jimmyjames88/turkey-sdk)**
 
-## �🚀 Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
