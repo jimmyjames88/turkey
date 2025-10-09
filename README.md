@@ -18,7 +18,19 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
 - **🎯 Role-based Access Control** - User and admin role management
 - **🧪 100% Test Coverage** - Comprehensive integration test suite (35/35 tests passing)
 
-## 🚀 Quick Start
+## � Turkey SDK
+
+For easy integration with your applications, use the official Turkey SDK:
+
+```bash
+npm install @jimmyjames88/turkey-sdk
+```
+
+The SDK provides TypeScript-first client libraries with built-in token management, automatic refresh handling, and React hooks for seamless authentication flows.
+
+**🔗 [View Turkey SDK Documentation →](https://github.com/jimmyjames88/turkey-sdk)**
+
+## �🚀 Quick Start
 
 ### Prerequisites
 
