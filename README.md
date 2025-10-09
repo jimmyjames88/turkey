@@ -1,11 +1,5 @@
 <p align="center">
-  <img src="./public/turkey-logo.svg" alt="5. **Start development server:**
-
-```bash
-npm run dev
-```
-
-6. **Verify installation:** width="300" >
+  <img src="./public/turkey-logo.svg" width="300" />
 </p>
 
 # 🦃 TurKey Auth API
