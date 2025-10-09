@@ -59,28 +59,71 @@ dbCommands
   .action(async () => {
     try {
       const { db } = await import('../../src/db')
-      const { users, refreshTokens, keys, audit } = await import('../../src/db/schema')
+      const { users, refreshTokens, keys, audit, tenants } = await import('../../src/db/schema')
       const { sql } = await import('drizzle-orm')
 
       console.log('📊 Database Statistics:\n')
 
-      // Users count
-      const [userCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users)
-      console.log(`👥 Users: ${userCount.count}`)
+      // First, let's check what tables exist
+      console.log('🔍 Checking existing tables...')
+      const tableCheck = await db.execute(sql`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        ORDER BY table_name
+      `)
 
-      // Active refresh tokens count
-      const [tokenCount] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(refreshTokens)
-      console.log(`🔑 Refresh Tokens: ${tokenCount.count}`)
+      console.log('Tables found:')
+      tableCheck.forEach(row => console.log(`  - ${row.table_name}`))
+      console.log('')
 
-      // Keys count
-      const [keyCount] = await db.select({ count: sql<number>`count(*)::int` }).from(keys)
-      console.log(`🔐 Cryptographic Keys: ${keyCount.count}`)
+      // Try to get counts for each table
+      try {
+        const [userCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users)
+        console.log(`👥 Users: ${userCount.count}`)
+      } catch (err) {
+        console.log(
+          `👥 Users: ❌ Table not accessible (${err instanceof Error ? err.message : err})`
+        )
+      }
 
-      // Audit logs count
-      const [auditCount] = await db.select({ count: sql<number>`count(*)::int` }).from(audit)
-      console.log(`📋 Audit Logs: ${auditCount.count}`)
+      try {
+        const [tenantCount] = await db.select({ count: sql<number>`count(*)::int` }).from(tenants)
+        console.log(`🏢 Tenants: ${tenantCount.count}`)
+      } catch (err) {
+        console.log(
+          `🏢 Tenants: ❌ Table not accessible (${err instanceof Error ? err.message : err})`
+        )
+      }
+
+      try {
+        const [tokenCount] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(refreshTokens)
+        console.log(`🔑 Refresh Tokens: ${tokenCount.count}`)
+      } catch (err) {
+        console.log(
+          `🔑 Refresh Tokens: ❌ Table not accessible (${err instanceof Error ? err.message : err})`
+        )
+      }
+
+      try {
+        const [keyCount] = await db.select({ count: sql<number>`count(*)::int` }).from(keys)
+        console.log(`🔐 Cryptographic Keys: ${keyCount.count}`)
+      } catch (err) {
+        console.log(
+          `🔐 Cryptographic Keys: ❌ Table not accessible (${err instanceof Error ? err.message : err})`
+        )
+      }
+
+      try {
+        const [auditCount] = await db.select({ count: sql<number>`count(*)::int` }).from(audit)
+        console.log(`📋 Audit Logs: ${auditCount.count}`)
+      } catch (err) {
+        console.log(
+          `📋 Audit Logs: ❌ Table not accessible (${err instanceof Error ? err.message : err})`
+        )
+      }
 
       // Users by tenant
       const tenantStats = await db
@@ -109,6 +152,77 @@ dbCommands
     }
   })
 
+// Database reset (destructive operation)
+dbCommands
+  .command('reset')
+  .description('🚨 DESTRUCTIVE: Drop all tables and re-run existing migrations')
+  .option('-y, --yes', 'Skip confirmation prompt')
+  .action(async options => {
+    try {
+      // Confirmation prompt unless --yes flag is used
+      if (!options.yes) {
+        const readline = await import('readline')
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+        })
+
+        const answer = await new Promise<string>(resolve => {
+          rl.question(
+            '🚨 WARNING: This will DELETE ALL DATA in your database. Are you sure? (yes/no): ',
+            resolve
+          )
+        })
+        rl.close()
+
+        if (answer.toLowerCase() !== 'yes') {
+          console.log('❌ Database reset cancelled')
+          process.exit(0)
+        }
+      }
+
+      console.log('🔄 Starting database reset...')
+
+      // Step 1: Drop all tables
+      console.log('🗑️  Dropping all tables...')
+      const { db } = await import('../../src/db')
+      const { sql } = await import('drizzle-orm')
+
+      // Get all table names in the public schema
+      const tablesResult = await db.execute(sql`
+        SELECT tablename 
+        FROM pg_tables 
+        WHERE schemaname = 'public'
+      `)
+
+      // Drop all tables with CASCADE to handle foreign key constraints
+      for (const table of tablesResult) {
+        await db.execute(sql.raw(`DROP TABLE IF EXISTS "${table.tablename}" CASCADE`))
+        console.log(`   ✅ Dropped table: ${table.tablename}`)
+      }
+
+      // Also drop the drizzle migrations table if it exists
+      await db.execute(sql`DROP TABLE IF EXISTS "__drizzle_migrations" CASCADE`)
+      console.log('   ✅ Dropped migrations table')
+
+      // Step 2: Re-run existing migrations to recreate schema
+      console.log('🔄 Re-running existing migrations...')
+      const { migrate } = await import('drizzle-orm/postgres-js/migrator')
+      const pathModule = await import('path')
+
+      await migrate(db, {
+        migrationsFolder: pathModule.join(process.cwd(), 'migrations'),
+      })
+
+      console.log('✅ Database reset completed successfully!')
+      console.log('🎉 Your database has been reset with the existing schema')
+      process.exit(0)
+    } catch (error) {
+      console.error('❌ Database reset failed:', error instanceof Error ? error.message : error)
+      process.exit(1)
+    }
+  })
+
 // Generate database migrations
 dbCommands
   .command('generate')
@@ -119,8 +233,8 @@ dbCommands
 
       const { spawn } = await import('child_process')
 
-      // Run drizzle-kit generate:pg
-      const child = spawn('npx', ['drizzle-kit', 'generate:pg'], {
+      // Run drizzle-kit generate
+      const child = spawn('npx', ['drizzle-kit', 'generate'], {
         stdio: 'inherit',
         shell: true,
       })
@@ -150,23 +264,51 @@ dbCommands
   .action(async () => {
     try {
       console.log('🎨 Opening Drizzle Studio...')
+      console.log('📍 Studio will be available at: https://local.drizzle.studio')
+      console.log('🔄 Starting server... (this may take a few seconds)')
+      console.log('ℹ️  Note: Drizzle Studio uses a secure tunnel to local.drizzle.studio')
+      console.log('')
 
       const { spawn } = await import('child_process')
 
       // Run drizzle-kit studio
       const child = spawn('npx', ['drizzle-kit', 'studio'], {
-        stdio: 'inherit',
+        stdio: ['inherit', 'pipe', 'inherit'],
         shell: true,
+      })
+
+      // Filter and clean up stdout to remove ANSI codes
+      child.stdout?.on('data', data => {
+        const output = data.toString()
+        // Remove ANSI color codes (ESC[...m pattern)
+        // ESLint-safe way to handle ANSI escape sequences
+        const ansiRegex = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g')
+        const cleanOutput = output.replace(ansiRegex, '')
+
+        // Only show important messages
+        if (cleanOutput.includes('Drizzle Studio is up and running')) {
+          console.log('✅ Drizzle Studio is now running!')
+          console.log('🌐 Open your browser to: https://local.drizzle.studio')
+          console.log('⏹️  Press Ctrl+C to stop the studio server')
+        } else if (cleanOutput.includes('Error') || cleanOutput.includes('Failed')) {
+          console.error('❌', cleanOutput.trim())
+        }
       })
 
       child.on('close', code => {
         if (code === 0) {
-          console.log('✅ Drizzle Studio closed')
+          console.log('\n✅ Drizzle Studio closed')
           process.exit(0)
         } else {
-          console.error('❌ Drizzle Studio failed to start')
+          console.error('\n❌ Drizzle Studio failed to start')
           process.exit(1)
         }
+      })
+
+      // Handle Ctrl+C gracefully
+      process.on('SIGINT', () => {
+        console.log('\n🛑 Stopping Drizzle Studio...')
+        child.kill('SIGINT')
       })
     } catch (error) {
       console.error(
