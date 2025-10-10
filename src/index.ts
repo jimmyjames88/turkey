@@ -80,9 +80,27 @@ async function startServer() {
     })
     logger.info('Database migrations completed successfully!')
 
-    // Initialize key management
+    // Initialize key management with retry logic
     logger.info('Initializing key management...')
-    await initializeKeyManagement()
+    let keyInitRetries = 3
+    while (keyInitRetries > 0) {
+      try {
+        await initializeKeyManagement()
+        break
+      } catch (error) {
+        keyInitRetries--
+        logger.warn(
+          `Key initialization attempt failed, ${keyInitRetries} retries left:`,
+          error as Error
+        )
+        if (keyInitRetries === 0) {
+          logger.error('Key initialization failed after all retries, server cannot start safely')
+          throw error
+        }
+        // Wait 1 second before retry
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
 
     const server = app.listen(PORT, () => {
       logger.info(`🦃 TurKey Auth API running on port ${PORT}`)

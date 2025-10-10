@@ -51,10 +51,19 @@ export async function storeKeyPair(keyPair: KeyPair): Promise<void> {
   })
 }
 
+// Cache for active signing key to avoid repeated DB queries
+let cachedSigningKey: KeyPair | null = null
+
 /**
- * Get the current active signing key
+ * Get the current active signing key with lazy initialization
  */
 export async function getActiveSigningKey(): Promise<KeyPair | null> {
+  // Return cached key if available
+  if (cachedSigningKey) {
+    return cachedSigningKey
+  }
+
+  // Try to get key from database
   const [activeKey] = await db
     .select()
     .from(keys)
@@ -63,7 +72,20 @@ export async function getActiveSigningKey(): Promise<KeyPair | null> {
     .limit(1)
 
   if (!activeKey) {
-    return null
+    // No key exists - generate one automatically
+    console.log('🔑 No signing key found, generating one automatically...')
+    try {
+      const keyPair = await generateES256KeyPair()
+      await storeKeyPair(keyPair)
+      console.log(`🔑 Auto-generated key pair with kid: ${keyPair.kid}`)
+
+      // Cache the new key
+      cachedSigningKey = keyPair
+      return keyPair
+    } catch (error) {
+      console.error('❌ Failed to auto-generate signing key:', error)
+      return null
+    }
   }
 
   // Import keys from PEM
@@ -71,13 +93,17 @@ export async function getActiveSigningKey(): Promise<KeyPair | null> {
   const privateKey = await importPKCS8(activeKey.privatePem, 'ES256')
   const publicKey = await importSPKI(activeKey.publicPem, 'ES256')
 
-  return {
+  const keyPair = {
     kid: activeKey.kid,
     publicKey,
     privateKey,
     publicPem: activeKey.publicPem,
     privatePem: activeKey.privatePem,
   }
+
+  // Cache for future use
+  cachedSigningKey = keyPair
+  return keyPair
 }
 
 /**
