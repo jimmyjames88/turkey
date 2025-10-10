@@ -205,14 +205,25 @@ dbCommands
       await db.execute(sql`DROP TABLE IF EXISTS "__drizzle_migrations" CASCADE`)
       console.log('   ✅ Dropped migrations table')
 
-      // Step 2: Re-run existing migrations to recreate schema
-      console.log('🔄 Re-running existing migrations...')
-      const { migrate } = await import('drizzle-orm/postgres-js/migrator')
-      const pathModule = await import('path')
+      // Step 2: Use drizzle-kit push to recreate schema
+      console.log('🔄 Recreating schema from current definitions...')
+      const { spawn } = await import('child_process')
 
-      await migrate(db, {
-        migrationsFolder: pathModule.join(process.cwd(), 'migrations'),
+      const pushResult = await new Promise<number>(resolve => {
+        const child = spawn('npx', ['drizzle-kit', 'push', '--force'], {
+          stdio: 'inherit',
+          shell: true,
+        })
+
+        child.on('close', code => {
+          resolve(code || 0)
+        })
       })
+
+      if (pushResult !== 0) {
+        console.error('❌ Schema recreation failed')
+        process.exit(1)
+      }
 
       console.log('✅ Database reset completed successfully!')
       console.log('🎉 Your database has been reset with the existing schema')
