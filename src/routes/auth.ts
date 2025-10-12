@@ -267,3 +267,79 @@ router.post(
 )
 
 export default router
+
+/**
+ * POST /v1/auth/introspect
+ * Introspect an access or refresh token. Accepts { token: string }
+ */
+router.post(
+  '/introspect',
+  asyncHandler(async (req, res) => {
+    const { token } = req.body as { token?: string }
+    if (!token) return res.status(400).json({ error: 'Missing token' })
+
+    // Try refresh token first
+    try {
+      const refresh = await validateRefreshToken(token)
+      if (refresh) {
+        return res.json({
+          data: {
+            active: true,
+            type: 'refresh',
+            expiresAt: refresh.expiresAt,
+            userId: refresh.userId,
+            tenantId: refresh.tenantId,
+          },
+        })
+      }
+    } catch (err) {
+      // fallthrough
+    }
+
+    // Try access token verification via JWKS
+
+    try {
+      // Use JWKS verification via jwksService
+      const { verifyTokenWithJwks } = await import('@/services/jwksService')
+      const payload = await verifyTokenWithJwks(token)
+      return res.json({ data: { active: true, type: 'access', payload } })
+    } catch (err: any) {
+      return res.json({ data: { active: false } })
+    }
+  })
+)
+
+/**
+ * POST /v1/auth/revoke
+ * Revoke a refresh or access token (primarily refresh tokens)
+ */
+router.post(
+  '/revoke',
+  asyncHandler(async (req, res) => {
+    const { token } = req.body as { token?: string }
+    if (!token) return res.status(400).json({ error: 'Missing token' })
+
+    // Attempt to revoke refresh token
+    const stored = await validateRefreshToken(token)
+    if (stored) {
+      await revokeRefreshToken(stored.id)
+      return res.json({ message: 'Token revoked' })
+    }
+    // Access token revocation is approximated by incrementing tokenVersion for the user if token valid
+    try {
+      const { verifyTokenWithJwks } = await import('@/services/jwksService')
+      const payload = await verifyTokenWithJwks(token)
+      // Increment tokenVersion to invalidate all access tokens for this user
+      await db
+        .update(users)
+        .set({ tokenVersion: payload.tokenVersion + 1 })
+        .where(eq(users.id, payload.sub))
+      // Also revoke all refresh tokens
+      await revokeAllUserRefreshTokens(payload.sub)
+      return res.json({ message: 'Access invalidated and refresh tokens revoked' })
+    } catch (err) {
+      // Nothing we can revoke
+      return res.status(400).json({ error: 'Token not recognized' })
+    }
+  })
+)
