@@ -28,27 +28,26 @@ const router = Router()
 const loginSchema = z.object({
   email: commonSchemas.email,
   password: commonSchemas.password.min(1, 'Password is required'),
-  tenantId: commonSchemas.tenantId,
-  audience: z
+  appId: z
     .string()
-    .min(1, 'Audience cannot be empty')
-    .max(100, 'Audience too long')
+    .min(1, 'App ID cannot be empty')
+    .max(100, 'App ID too long')
     .regex(
       /^[a-zA-Z0-9_-]+$/,
-      'Audience must contain only letters, numbers, underscores, and hyphens'
+      'App ID must contain only letters, numbers, underscores, and hyphens'
     )
     .optional(),
 })
 
 const refreshSchema = z.object({
   refreshToken: commonSchemas.jwtToken,
-  audience: z
+  appId: z
     .string()
-    .min(1, 'Audience cannot be empty')
-    .max(100, 'Audience too long')
+    .min(1, 'App ID cannot be empty')
+    .max(100, 'App ID too long')
     .regex(
       /^[a-zA-Z0-9_-]+$/,
-      'Audience must contain only letters, numbers, underscores, and hyphens'
+      'App ID must contain only letters, numbers, underscores, and hyphens'
     )
     .optional(),
 })
@@ -56,15 +55,14 @@ const refreshSchema = z.object({
 const registerSchema = z.object({
   email: commonSchemas.email,
   password: commonSchemas.password,
-  tenantId: commonSchemas.tenantId,
   role: commonSchemas.role,
-  audience: z
+  appId: z
     .string()
-    .min(1, 'Audience cannot be empty')
-    .max(100, 'Audience too long')
+    .min(1, 'App ID cannot be empty')
+    .max(100, 'App ID too long')
     .regex(
       /^[a-zA-Z0-9_-]+$/,
-      'Audience must contain only letters, numbers, underscores, and hyphens'
+      'App ID must contain only letters, numbers, underscores, and hyphens'
     )
     .optional(),
 })
@@ -79,13 +77,10 @@ router.post(
   bruteForceProtection,
   validateRequest(loginSchema),
   asyncHandler(async (req, res) => {
-    const { email, password, tenantId, audience } = req.body
+    const { email, password, appId } = req.body
 
-    // Find user
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(and(eq(users.email, email), eq(users.tenantId, tenantId)))
+    // Find user (no longer filtering by tenant)
+    const [user] = await db.select().from(users).where(eq(users.email, email))
 
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
       // Record failed attempt
@@ -94,10 +89,10 @@ router.post(
     }
 
     // Create token pair with app-specific audience
-    const tokenPair = await createTokenPair(user, '', audience)
+    const tokenPair = await createTokenPair(user, '', appId)
 
-    // Store refresh token
-    await storeRefreshToken(tokenPair.refreshToken, user.id, user.tenantId)
+    // Store refresh token (no tenant ID needed)
+    await storeRefreshToken(tokenPair.refreshToken, user.id)
 
     // Record successful login
     recordLoginAttempt(true)(req, res, () => {})

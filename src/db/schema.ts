@@ -7,52 +7,26 @@ import {
   integer,
   boolean,
   index,
-  unique,
-  jsonb,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
-// Tenants table
-export const tenants = pgTable(
-  'tenants',
-  {
-    id: varchar('id', { length: 50 }).primaryKey(),
-    name: varchar('name', { length: 255 }).notNull(),
-    domain: varchar('domain', { length: 255 }),
-    isActive: boolean('is_active').notNull().default(true),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
-    settings: jsonb('settings').default('{}'),
-  },
-  table => ({
-    nameIdx: index('tenants_name_idx').on(table.name),
-    domainIdx: index('tenants_domain_idx').on(table.domain),
-    activeIdx: index('tenants_active_idx').on(table.isActive),
-  })
-)
-
-// Users table
+// Users table - simplified without tenant isolation
 export const users = pgTable(
   'users',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    email: varchar('email', { length: 255 }).notNull(),
+    email: varchar('email', { length: 255 }).notNull().unique(), // Now globally unique
     passwordHash: text('password_hash').notNull(),
     role: varchar('role', { length: 50 }).notNull().default('user'),
-    tenantId: varchar('tenant_id', { length: 50 })
-      .notNull()
-      .references(() => tenants.id),
     tokenVersion: integer('token_version').notNull().default(0),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   table => ({
     emailIdx: index('users_email_idx').on(table.email),
-    tenantIdx: index('users_tenant_idx').on(table.tenantId),
-    emailTenantUnique: unique('users_email_tenant_unique').on(table.email, table.tenantId),
   })
 )
 
-// Refresh tokens table
+// Refresh tokens table - simplified without tenant references
 export const refreshTokens = pgTable(
   'refresh_tokens',
   {
@@ -60,9 +34,6 @@ export const refreshTokens = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    tenantId: varchar('tenant_id', { length: 50 })
-      .notNull()
-      .references(() => tenants.id),
     tokenHash: text('token_hash').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     expiresAt: timestamp('expires_at').notNull(),
@@ -71,7 +42,6 @@ export const refreshTokens = pgTable(
   },
   table => ({
     userIdx: index('refresh_tokens_user_idx').on(table.userId),
-    tenantIdx: index('refresh_tokens_tenant_idx').on(table.tenantId),
     hashIdx: index('refresh_tokens_hash_idx').on(table.tokenHash),
   })
 )
@@ -133,15 +103,11 @@ export const audit = pgTable(
   })
 )
 
-// Relations
+// Relations - simplified without tenant relationships
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
   user: one(users, {
     fields: [refreshTokens.userId],
     references: [users.id],
-  }),
-  tenant: one(tenants, {
-    fields: [refreshTokens.tenantId],
-    references: [tenants.id],
   }),
 }))
 
@@ -159,17 +125,7 @@ export const auditRelations = relations(audit, ({ one }) => ({
   }),
 }))
 
-// Tenant relations
-export const tenantsRelations = relations(tenants, ({ many }) => ({
-  users: many(users),
-  refreshTokens: many(refreshTokens),
-}))
-
-// User relations (updated to include tenant)
-export const usersRelations = relations(users, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [users.tenantId],
-    references: [tenants.id],
-  }),
+// User relations - simplified without tenant
+export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
 }))
