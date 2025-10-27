@@ -40,7 +40,6 @@ async function testBasicEndpoints() {
       testEndpoint('/v1/auth/login', 'POST', {
         email: testUser.email,
         password: testUser.password,
-        tenantId: testUser.tenantId,
       }),
   ]
 

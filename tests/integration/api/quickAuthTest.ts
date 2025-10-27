@@ -12,7 +12,6 @@ async function quickAuthTest() {
 
   const registerResult = await testEndpoint('/v1/auth/register', 'POST', {
     ...testUser,
-    tenantId: 'tenant_quickauth',
     role: 'user',
   })
 
@@ -25,7 +24,6 @@ async function quickAuthTest() {
   const loginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: testUser.email,
     password: testUser.password,
-    tenantId: 'tenant_quickauth',
   })
 
   if (loginResult.status !== 200) {

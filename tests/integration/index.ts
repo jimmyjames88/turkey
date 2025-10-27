@@ -4,7 +4,6 @@ import { testAdvancedFlow } from './api/advancedFlow.test'
 import { testRateLimiting } from './api/rateLimiting.test'
 import { testAuthenticationMiddleware } from './api/authMiddleware.test'
 import { testAppAudiences } from './api/appAudiences.test'
-import { setupTestTenants } from '../helpers/testUtils'
 // Using development database - no separate test database setup needed
 
 /**
@@ -27,12 +26,6 @@ async function runAllIntegrationTests() {
   try {
     // Using development database directly
     console.log('🔧 Using development database...')
-
-    // Setup test tenants
-    console.log('🏗️  Setting up test tenants...')
-    await setupTestTenants()
-    console.log('✅ Test tenants created')
-
     console.log('✅ Ready to run tests\n')
 
     // Run basic endpoints tests

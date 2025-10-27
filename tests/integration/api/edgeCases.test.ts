@@ -14,7 +14,6 @@ async function testEdgeCases() {
   const weakPasswordResult = await testEndpoint('/v1/auth/register', 'POST', {
     email: 'weak@example.com',
     password: '123', // Weak password
-    tenantId: 'tenant_001',
   })
 
   const weakPasswordSuccess = weakPasswordResult.status === 400
@@ -34,7 +33,6 @@ async function testEdgeCases() {
   const testUser = {
     email: 'duplicate-test@example.com',
     password: 'SecurePass123!',
-    tenantId: 'tenant_basic', // Use existing tenant instead of non-existent one
     role: 'user',
   }
 
@@ -58,7 +56,6 @@ async function testEdgeCases() {
   const invalidLoginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: 'testbasic@example.com',
     password: 'WrongPassword123!',
-    tenantId: 'tenant_basic',
   })
 
   const invalidLoginSuccess = invalidLoginResult.status === 401
@@ -87,29 +84,11 @@ async function testEdgeCases() {
   console.log('')
   results.push({ name: 'invalid refresh', success: invalidRefreshSuccess })
 
-  // Test 5: Cross-tenant access - SHOULD FAIL with 401
-  console.log('Testing cross-tenant access prevention...')
-  const crossTenantResult = await testEndpoint('/v1/auth/login', 'POST', {
-    email: 'testbasic@example.com',
-    password: 'SecurePass123!',
-    tenantId: 'different_tenant', // Different tenant
-  })
-
-  const crossTenantSuccess = crossTenantResult.status === 401
-  console.log(
-    `${crossTenantSuccess ? '✅' : '❌'} POST /v1/auth/login - ${crossTenantResult.status} (Expected: 401)`
-  )
-  if (crossTenantResult.data) {
-    console.log(`   Response: ${JSON.stringify(crossTenantResult.data).substring(0, 200)}...`)
-  }
-  console.log('')
-  results.push({ name: 'cross-tenant', success: crossTenantSuccess })
-
-  // Test 6: Missing required fields - SHOULD FAIL with 400
+  // Test 5: Missing required fields - SHOULD FAIL with 400
   console.log('Testing missing required fields...')
   const missingFieldsResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: 'test@example.com',
-    // Missing password and tenantId
+    // Missing password
   })
 
   const missingFieldsSuccess = missingFieldsResult.status === 400

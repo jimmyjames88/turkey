@@ -12,7 +12,6 @@ async function testRefreshTokenRateLimit() {
   console.log('1. Registering test user...')
   const registerResult = await testEndpoint('/v1/auth/register', 'POST', {
     ...refreshUser,
-    tenantId: 'tenant_quickrefresh',
   })
 
   const registerStatus = registerResult.status === 201 || registerResult.status === 409
@@ -22,7 +21,6 @@ async function testRefreshTokenRateLimit() {
   const loginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: refreshUser.email,
     password: refreshUser.password,
-    tenantId: 'tenant_quickrefresh',
   })
 
   console.log(

@@ -25,7 +25,6 @@ async function testRateLimiting() {
   // First, register the user
   const registerResult = await testEndpoint('/v1/auth/register', 'POST', {
     ...testUser,
-    tenantId: 'tenant_ratelimit',
   })
   console.log(
     `Registration: ${registerResult.status === 201 || registerResult.status === 409 ? 'OK' : 'FAILED'}`
@@ -39,7 +38,6 @@ async function testRateLimiting() {
     const loginResult = await testEndpoint('/v1/auth/login', 'POST', {
       email: testUser.email,
       password: testUser.password,
-      tenantId: 'tenant_ratelimit',
     })
 
     loginAttempts++
@@ -67,7 +65,6 @@ async function testRateLimiting() {
   // Register the brute force test user
   const bruteRegisterResult = await testEndpoint('/v1/auth/register', 'POST', {
     ...bruteForceUser,
-    tenantId: 'tenant_bruteforce',
   })
   console.log(
     `Brute force test user registration: ${bruteRegisterResult.status === 201 || bruteRegisterResult.status === 409 ? 'OK' : 'FAILED'}`
@@ -82,7 +79,6 @@ async function testRateLimiting() {
     const failedLoginResult = await testEndpoint('/v1/auth/login', 'POST', {
       email: bruteForceUser.email,
       password: 'WrongPassword123!',
-      tenantId: 'tenant_bruteforce',
     })
 
     failedAttempts++
@@ -119,7 +115,6 @@ async function testRateLimiting() {
   // Register the refresh test user
   const refreshRegisterResult = await testEndpoint('/v1/auth/register', 'POST', {
     ...refreshTestUser,
-    tenantId: 'tenant_refresh',
   })
   console.log(
     `Refresh test user registration: ${refreshRegisterResult.status === 201 || refreshRegisterResult.status === 409 ? 'OK' : 'FAILED'}`
@@ -129,7 +124,6 @@ async function testRateLimiting() {
   const loginForRefresh = await testEndpoint('/v1/auth/login', 'POST', {
     email: refreshTestUser.email,
     password: refreshTestUser.password,
-    tenantId: 'tenant_refresh',
   })
 
   let refreshSuccess = false
@@ -183,7 +177,6 @@ async function testRateLimiting() {
     const regResult = await testEndpoint('/v1/auth/register', 'POST', {
       email: `ratetest${Date.now()}_${i}@example.com`, // Use timestamp to ensure uniqueness
       password: 'SecurePass123!',
-      tenantId: 'tenant_registration',
       role: 'user',
     })
 
