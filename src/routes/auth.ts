@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { db } from '@/db'
 import { users } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { verifyPassword, hashPassword, validatePassword } from '@/services/passwordService'
 import { createTokenPair } from '@/services/tokenService'
 import {
@@ -103,7 +103,6 @@ router.post(
           id: user.id,
           email: user.email,
           role: user.role,
-          tenantId: user.tenantId,
         },
         ...tokenPair,
       },
@@ -139,7 +138,7 @@ router.post(
     const newTokenPair = await createTokenPair(user, '', audience)
 
     // Rotate refresh token
-    await rotateRefreshToken(storedToken.id, newTokenPair.refreshToken, user.id, user.tenantId)
+    await rotateRefreshToken(storedToken.id, newTokenPair.refreshToken, user.id)
 
     res.json({
       data: newTokenPair,
@@ -210,7 +209,7 @@ router.post(
   registrationRateLimit,
   validateRequest(registerSchema),
   asyncHandler(async (req, res) => {
-    const { email, password, tenantId, role, audience } = req.body
+    const { email, password, role, audience } = req.body
 
     // Validate password strength
     const passwordValidation = validatePassword(password)
@@ -219,10 +218,7 @@ router.post(
     }
 
     // Check if user already exists
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(and(eq(users.email, email), eq(users.tenantId, tenantId)))
+    const [existingUser] = await db.select().from(users).where(eq(users.email, email))
 
     if (existingUser) {
       throw errorHelpers.userExists()
@@ -237,7 +233,6 @@ router.post(
         email,
         passwordHash,
         role,
-        tenantId,
       })
       .returning()
 
@@ -245,7 +240,7 @@ router.post(
     const tokenPair = await createTokenPair(newUser, '', audience)
 
     // Store refresh token
-    await storeRefreshToken(tokenPair.refreshToken, newUser.id, newUser.tenantId)
+    await storeRefreshToken(tokenPair.refreshToken, newUser.id)
 
     res.status(201).json({
       data: {
@@ -253,7 +248,6 @@ router.post(
           id: newUser.id,
           email: newUser.email,
           role: newUser.role,
-          tenantId: newUser.tenantId,
         },
         ...tokenPair,
       },
@@ -283,7 +277,6 @@ router.post(
             type: 'refresh',
             expiresAt: refresh.expiresAt,
             userId: refresh.userId,
-            tenantId: refresh.tenantId,
           },
         })
       }

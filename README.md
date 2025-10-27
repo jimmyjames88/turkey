@@ -162,16 +162,16 @@ Register a new user account.
 {
   "email": "user@example.com",
   "password": "SecurePass123!",
-  "tenantId": "tenant_001",
-  "role": "user"
+  "role": "user",
+  "appId": "my-app"
 }
 ```
 
 **Validation Rules:**
 
-- `email`: Valid email format
+- `email`: Valid email format (globally unique)
 - `password`: Min 8 chars, must contain uppercase, lowercase, number, and special character
-- `tenantId`: 1-50 alphanumeric characters, underscores, and hyphens
+- `appId`: Optional - 1-100 alphanumeric characters, underscores, and hyphens
 - `role`: Either "user" or "admin"
 
 **Success Response (201):**
@@ -181,8 +181,7 @@ Register a new user account.
   "user": {
     "id": "uuid",
     "email": "user@example.com",
-    "role": "user",
-    "tenantId": "tenant_001"
+    "role": "user"
   },
   "accessToken": "eyJ...",
   "refreshToken": "rt_..."
@@ -192,7 +191,7 @@ Register a new user account.
 **Error Responses:**
 
 - `400` - Validation error or weak password
-- `409` - User already exists in tenant
+- `409` - User already exists
 - `429` - Rate limit exceeded
 
 ---
@@ -207,7 +206,7 @@ Authenticate user and receive tokens.
 {
   "email": "user@example.com",
   "password": "SecurePass123!",
-  "tenantId": "tenant_001"
+  "appId": "my-app"
 }
 ```
 
@@ -326,7 +325,6 @@ Get current user profile.
     "id": "uuid",
     "email": "user@example.com",
     "role": "user",
-    "tenantId": "tenant_001",
     "createdAt": "2025-10-01T00:00:00.000Z"
   },
   "tokenInfo": {
@@ -354,8 +352,7 @@ Alternative profile endpoint demonstrating role-based access.
   "user": {
     "id": "uuid",
     "email": "user@example.com",
-    "role": "user",
-    "tenantId": "tenant_001"
+    "role": "user"
   }
 }
 ```
@@ -376,8 +373,7 @@ Admin-only test endpoint.
   "admin": {
     "id": "uuid",
     "email": "admin@example.com",
-    "role": "admin",
-    "tenantId": "tenant_001"
+    "role": "admin"
   },
   "adminCapabilities": ["user_management", "key_rotation", "audit_access", "system_configuration"]
 }
@@ -388,34 +384,6 @@ Admin-only test endpoint.
 - `403` - Insufficient permissions (user role trying to access admin endpoint)
 
 ---
-
-### GET /v1/users/tenant-info
-
-**🔒 Requires Authentication**
-
-Get information about current user's tenant (demonstrates tenant isolation).
-
-**Success Response (200):**
-
-```json
-{
-  "tenantId": "tenant_001",
-  "userCount": 5,
-  "users": [
-    {
-      "id": "uuid1",
-      "email": "user1@example.com",
-      "role": "user",
-      "createdAt": "2025-10-01T00:00:00.000Z"
-    }
-  ],
-  "requestingUser": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "role": "user"
-  }
-}
-```
 
 ---
 
@@ -435,8 +403,7 @@ Test endpoint to verify token parsing and validation.
     "user": {
       "id": "uuid",
       "email": "user@example.com",
-      "role": "user",
-      "tenantId": "tenant_001"
+      "role": "user"
     },
     "tokenClaims": {
       "jti": "token_id",
@@ -584,23 +551,12 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 
 ### Database Schema
 
-**Tenants Table:**
-
-- `id` (String, Primary Key, max 50 chars)
-- `name` (String, Tenant display name)
-- `domain` (String, Optional domain restriction)
-- `isActive` (Boolean, Tenant status)
-- `createdAt` (Timestamp)
-- `updatedAt` (Timestamp)
-- `settings` (JSONB, Tenant-specific configuration)
-
 **Users Table:**
 
 - `id` (UUID, Primary Key)
-- `email` (String, Unique per tenant)
+- `email` (String, Globally unique)
 - `passwordHash` (String, bcrypt)
 - `role` (Enum: user, admin)
-- `tenantId` (String, Foreign Key to tenants)
 - `tokenVersion` (Integer, for token invalidation)
 - `createdAt` (Timestamp)
 
@@ -608,7 +564,6 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 
 - `id` (UUID, Primary Key)
 - `userId` (UUID, Foreign Key)
-- `tenantId` (String)
 - `tokenHash` (String, bcrypt)
 - `createdAt` (Timestamp)
 - `expiresAt` (Timestamp)
@@ -629,7 +584,7 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 1. **ES256 JWT Tokens** - Asymmetric signing for enhanced security
 2. **Short-lived Access Tokens** - 15-minute expiration
 3. **Rotating Refresh Tokens** - 90-day expiration with rotation
-4. **Multi-tenant Isolation** - Users scoped to tenants
+4. **App-Specific Tokens** - JWT audience claims for application isolation
 5. **Role-based Access Control** - User and admin roles
 6. **Token Version Checking** - Global logout capability
 
@@ -643,8 +598,7 @@ The API includes a comprehensive test suite with 35 integration tests covering:
 - ✅ Rate limiting and brute force protection
 - ✅ Role-based access control
 - ✅ Token validation and refresh
-- ✅ Tenant isolation
-- ✅ App-specific JWT audiences
+- ✅ App-specific JWT tokens
 
 ## 📝 License
 
@@ -663,7 +617,7 @@ ISC License
 - [ ] Set up monitoring and alerting
 - [ ] Configure key rotation schedule
 - [ ] Set up database backups
-- [ ] Create initial tenants with `./gravy tenant:create`
+- [ ] Generate ES256 key pairs with `./gravy dev:keygen`
 
 # 🍗 Gravy CLI Commands
 
@@ -679,27 +633,16 @@ From the Turkey project root directory:
 
 ## Available Commands
 
-### 🏢 Tenant Management
-
-```bash
-# List all tenants
-./gravy tenant:list
-
-# Show detailed tenant information
-./gravy tenant:show <tenant-id>
-```
-
 ### 👥 User Management
 
 ```bash
 # Create a new user
-./gravy user:create -e user@example.com -p password123 -t default -r user
+./gravy user:create -e user@example.com -p password123 -r user
 
 # List users (with optional filters)
 ./gravy user:list
-./gravy user:list -t default
 ./gravy user:list -r admin
-./gravy user:list -t default -r user -l 10
+./gravy user:list -r user -l 10
 
 # Delete a user (with confirmation)
 ./gravy user:delete <user-id>
@@ -708,9 +651,7 @@ From the Turkey project root directory:
 # Find users by email address
 ./gravy user:find <email>
 ./gravy user:find <email> --exact
-./gravy user:find <email> --tenant tenant_001
 ./gravy user:find <email> --role admin
-./gravy user:find <email> --tenant tenant_001 --role user --exact
 ```
 
 ### 🗄️ Database Management
@@ -736,7 +677,6 @@ From the Turkey project root directory:
 # List refresh tokens
 ./gravy token:list-refresh
 ./gravy token:list-refresh -u <user-id>
-./gravy token:list-refresh -t <tenant-id>
 ./gravy token:list-refresh --active-only
 ```
 
@@ -796,14 +736,11 @@ From the Turkey project root directory:
 # Find exact email match
 ./gravy user:find admin@company.com --exact
 
-# Find users in specific tenant
-./gravy user:find alice --tenant production
-
 # Find admin users with partial email
 ./gravy user:find support --role admin
 
-# Complex search: exact email in specific tenant
-./gravy user:find support@company.com --exact --tenant production --role admin
+# Find admin users with exact email
+./gravy user:find support@company.com --exact --role admin
 
 # Delete user safely (with confirmation)
 ./gravy user:delete <user-id>

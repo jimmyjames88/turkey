@@ -14,11 +14,7 @@ export function hashRefreshToken(token: string): string {
 /**
  * Store a refresh token in the database
  */
-export async function storeRefreshToken(
-  token: string,
-  userId: string,
-  tenantId: string
-): Promise<string> {
+export async function storeRefreshToken(token: string, userId: string): Promise<string> {
   const tokenHash = hashRefreshToken(token)
   const expiresAt = new Date(Date.now() + config.refreshTokenTtl * 1000)
 
@@ -26,7 +22,6 @@ export async function storeRefreshToken(
     .insert(refreshTokens)
     .values({
       userId,
-      tenantId,
       tokenHash,
       expiresAt,
     })
@@ -78,11 +73,10 @@ export async function revokeAllUserRefreshTokens(userId: string): Promise<void> 
 export async function rotateRefreshToken(
   oldTokenId: string,
   newToken: string,
-  userId: string,
-  tenantId: string
+  userId: string
 ): Promise<string> {
   // Store new token
-  const newTokenId = await storeRefreshToken(newToken, userId, tenantId)
+  const newTokenId = await storeRefreshToken(newToken, userId)
 
   // Revoke old token and set replacement reference
   await db

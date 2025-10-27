@@ -29,21 +29,18 @@ userCommands
   .description('Create a new user')
   .requiredOption('-e, --email <email>', 'User email address')
   .requiredOption('-p, --password <password>', 'User password')
-  .option('-t, --tenant <tenant-id>', 'Tenant ID', 'default')
   .option('-r, --role <role>', 'User role', 'user')
-  .action(async (options: { email: string; password: string; tenant: string; role: string }) => {
+  .action(async (options: { email: string; password: string; role: string }) => {
     try {
-      // Check if user already exists in this tenant
+      // Check if user already exists
       const existingUser = await db
         .select()
         .from(users)
-        .where(and(eq(users.email, options.email), eq(users.tenantId, options.tenant)))
+        .where(eq(users.email, options.email))
         .limit(1)
 
       if (existingUser.length > 0) {
-        console.error(
-          `❌ User with email ${options.email} already exists in tenant "${options.tenant}"`
-        )
+        console.error(`❌ User with email ${options.email} already exists`)
         process.exit(1)
       }
 
@@ -57,13 +54,11 @@ userCommands
           email: options.email,
           passwordHash,
           role: options.role,
-          tenantId: options.tenant,
         })
         .returning({
           id: users.id,
           email: users.email,
           role: users.role,
-          tenantId: users.tenantId,
           createdAt: users.createdAt,
         })
 
@@ -71,7 +66,6 @@ userCommands
       console.log(`   ID: ${newUser.id}`)
       console.log(`   Email: ${newUser.email}`)
       console.log(`   Role: ${newUser.role}`)
-      console.log(`   Tenant: ${newUser.tenantId}`)
       console.log(`   Created: ${newUser.createdAt.toLocaleDateString()}`)
 
       process.exit(0)
@@ -85,27 +79,18 @@ userCommands
 userCommands
   .command('list')
   .description('List users')
-  .option('-t, --tenant <tenant-id>', 'Filter by tenant ID')
   .option('-r, --role <role>', 'Filter by role')
   .option('-l, --limit <number>', 'Limit number of results', '50')
-  .action(async (options: { tenant?: string; role?: string; limit: string }) => {
+  .action(async (options: { role?: string; limit: string }) => {
     try {
-      // Build where conditions
-      let whereCondition
-      if (options.tenant && options.role) {
-        whereCondition = and(eq(users.tenantId, options.tenant), eq(users.role, options.role))
-      } else if (options.tenant) {
-        whereCondition = eq(users.tenantId, options.tenant)
-      } else if (options.role) {
-        whereCondition = eq(users.role, options.role)
-      }
+      // Build where condition
+      const whereCondition = options.role ? eq(users.role, options.role) : undefined
 
       const allUsers = await db
         .select({
           id: users.id,
           email: users.email,
           role: users.role,
-          tenantId: users.tenantId,
           createdAt: users.createdAt,
         })
         .from(users)
@@ -122,7 +107,6 @@ userCommands
       allUsers.forEach(user => {
         console.log(`📧 ${user.email} (${user.role})`)
         console.log(`   ID: ${user.id}`)
-        console.log(`   Tenant: ${user.tenantId}`)
         console.log(`   Created: ${user.createdAt.toLocaleDateString()}`)
         console.log()
       })
@@ -151,7 +135,6 @@ userCommands
         .select({
           id: users.id,
           email: users.email,
-          tenantId: users.tenantId,
         })
         .from(users)
         .where(eq(users.id, userId))
@@ -193,77 +176,64 @@ userCommands
   .command('find')
   .description('Find users by email address (supports partial matching)')
   .argument('<email>', 'Email address or partial email to search for')
-  .option('-t, --tenant <tenant-id>', 'Filter by tenant ID')
   .option('-r, --role <role>', 'Filter by role')
   .option('-e, --exact', 'Exact email match only (no partial matching)')
-  .action(
-    async (emailQuery: string, options: { tenant?: string; role?: string; exact?: boolean }) => {
-      try {
-        // Build where conditions
-        const whereConditions = []
+  .action(async (emailQuery: string, options: { role?: string; exact?: boolean }) => {
+    try {
+      // Build where conditions
+      const whereConditions = []
 
-        // Email condition - exact or partial match
-        if (options.exact) {
-          whereConditions.push(eq(users.email, emailQuery))
-        } else {
-          whereConditions.push(sql`${users.email} ILIKE ${`%${emailQuery}%`}`)
-        }
-
-        // Add tenant filter if specified
-        if (options.tenant) {
-          whereConditions.push(eq(users.tenantId, options.tenant))
-        }
-
-        // Add role filter if specified
-        if (options.role) {
-          whereConditions.push(eq(users.role, options.role))
-        }
-
-        // Combine all conditions
-        const whereCondition =
-          whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0]
-
-        const foundUsers = await db
-          .select({
-            id: users.id,
-            email: users.email,
-            role: users.role,
-            tenantId: users.tenantId,
-            createdAt: users.createdAt,
-          })
-          .from(users)
-          .where(whereCondition)
-          .orderBy(users.email)
-
-        if (foundUsers.length === 0) {
-          const searchType = options.exact ? 'exact' : 'partial'
-          console.log(`🔍 No users found with ${searchType} email match: "${emailQuery}"`)
-          if (options.tenant) {
-            console.log(`   in tenant: ${options.tenant}`)
-          }
-          if (options.role) {
-            console.log(`   with role: ${options.role}`)
-          }
-          process.exit(0)
-        }
-
-        const searchType = options.exact ? 'exact' : 'partial'
-        console.log(
-          `\n🎯 Found ${foundUsers.length} user(s) with ${searchType} email match: "${emailQuery}"\n`
-        )
-
-        foundUsers.forEach(user => {
-          console.log(`📧 ${user.email} (${user.role})`)
-          console.log(`   ID: ${user.id}`)
-          console.log(`   Tenant: ${user.tenantId}`)
-          console.log(`   Created: ${user.createdAt.toLocaleDateString()}`)
-          console.log()
-        })
-
-        process.exit(0)
-      } catch (error) {
-        console.error('❌ Failed to find users:', error instanceof Error ? error.message : error)
-        process.exit(1)
+      // Email condition - exact or partial match
+      if (options.exact) {
+        whereConditions.push(eq(users.email, emailQuery))
+      } else {
+        whereConditions.push(sql`${users.email} ILIKE ${`%${emailQuery}%`}`)
       }
+
+      // Add role filter if specified
+      if (options.role) {
+        whereConditions.push(eq(users.role, options.role))
+      }
+
+      // Combine all conditions
+      const whereCondition =
+        whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0]
+
+      const foundUsers = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          role: users.role,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(whereCondition)
+        .orderBy(users.email)
+
+      if (foundUsers.length === 0) {
+        const searchType = options.exact ? 'exact' : 'partial'
+        console.log(`🔍 No users found with ${searchType} email match: "${emailQuery}"`)
+        if (options.role) {
+          console.log(`   with role: ${options.role}`)
+        }
+        process.exit(0)
+      }
+
+      const searchType = options.exact ? 'exact' : 'partial'
+      console.log(
+        `\n🎯 Found ${foundUsers.length} user(s) with ${searchType} email match: "${emailQuery}"\n`
+      )
+
+      foundUsers.forEach(user => {
+        console.log(`📧 ${user.email} (${user.role})`)
+        console.log(`   ID: ${user.id}`)
+        console.log(`   Created: ${user.createdAt.toLocaleDateString()}`)
+        console.log()
+      })
+
+      process.exit(0)
+    } catch (error) {
+      console.error('❌ Failed to find users:', error instanceof Error ? error.message : error)
+      process.exit(1)
     }
-  )
+  })

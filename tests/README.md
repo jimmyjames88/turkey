@@ -22,11 +22,13 @@ tests/
 ### Integration Tests
 
 Run all integration tests:
+
 ```bash
 npm run test:integration
 ```
 
 Run specific test suites:
+
 ```bash
 npm run test:integration:basic     # Basic endpoint tests
 npm run test:integration:edge      # Edge cases and error handling
@@ -43,12 +45,14 @@ npm run test:watch         # Run Jest in watch mode
 ## Test Types
 
 ### Integration Tests
+
 - **Purpose**: Test API endpoints with real database and services
 - **Scope**: End-to-end request/response flows
 - **Dependencies**: Requires running API server and PostgreSQL
 - **Location**: `tests/integration/`
 
 ### Unit Tests (Planned)
+
 - **Purpose**: Test individual functions and classes in isolation
 - **Scope**: Single components with mocked dependencies
 - **Dependencies**: None (all mocked)
@@ -59,11 +63,13 @@ npm run test:watch         # Run Jest in watch mode
 Before running integration tests:
 
 1. **Start the API server**:
+
    ```bash
    npm run dev
    ```
 
 2. **Ensure database is migrated**:
+
    ```bash
    npm run db:migrate
    ```
@@ -73,15 +79,17 @@ Before running integration tests:
 ## Test Data
 
 Integration tests create their own test data with unique identifiers:
+
 - `testbasic@example.com` (basic endpoint tests)
 - `adminadvanced@example.com` (advanced flow tests)
-- Various tenant IDs for multi-tenant testing
+- Various app IDs for application-specific testing
 
 Tests are designed to be idempotent and can be run multiple times.
 
 ## Test Utilities
 
 The `helpers/testUtils.ts` provides:
+
 - `testEndpoint()` - Make HTTP requests to API
 - `logTestResult()` - Consistent test result formatting
 - `generateTestUser()` - Create test user data
