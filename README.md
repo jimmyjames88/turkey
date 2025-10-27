@@ -11,7 +11,7 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
 - **🔐 ES256 JWT Authentication** - Elliptic Curve Digital Signature Algorithm for enhanced security
 - **🔄 Refresh Token Rotation** - Automatic token rotation with replay attack protection
 - **🔑 JWKS Support** - Public key distribution via JSON Web Key Set
-- **🛡️ Multi-tenant Architecture** - Isolated user spaces with tenant-based access control
+- **🎯 App-Specific Tokens** - JWT audience claims for application isolation
 - **⚡ Rate Limiting & Brute Force Protection** - Comprehensive request throttling and account lockout
 - **🧹 Input Validation & Sanitization** - XSS protection with Zod schemas and DOMPurify
 - **📊 Standardized Error Handling** - Consistent error responses with detailed error codes
@@ -66,11 +66,11 @@ The SDK provides TypeScript-first client libraries with built-in token managemen
    ./gravy db:migrate
    ```
 
-4. **Create initial tenant (required):**
+4. **Generate cryptographic keys:**
 
    ```bash
-   # Create a tenant for your application
-   ./gravy tenant:create -i your_app -n "Your App Name"
+   # Generate ES256 key pair for JWT signing
+   ./gravy dev:keygen
    ```
 
 5. **Start development server:**
