@@ -1,6 +1,4 @@
 import fetch from 'node-fetch'
-import { db } from '../../src/db'
-import { tenants } from '../../src/db/schema'
 
 const BASE_URL = process.env.TEST_API_URL || 'http://localhost:3000'
 
@@ -67,64 +65,20 @@ export function logTestResult(result: TestResult): void {
   console.log('')
 }
 
-export async function createTestTenant(tenantId: string, name?: string): Promise<TestResult> {
-  try {
-    // Create tenant directly in database
-    await db.insert(tenants).values({
-      id: tenantId,
-      name: name || `Test Tenant ${tenantId}`,
-      domain: null,
-      isActive: true,
-      settings: {},
-    })
-
-    return {
-      endpoint: 'database',
-      method: 'INSERT',
-      status: 201,
-      success: true,
-      data: { tenantId, name: name || `Test Tenant ${tenantId}` },
-    }
-  } catch (error) {
-    // If tenant already exists, that's fine
-    if (error instanceof Error && error.message.includes('duplicate key')) {
-      return {
-        endpoint: 'database',
-        method: 'INSERT',
-        status: 200,
-        success: true,
-        data: { tenantId, message: 'Tenant already exists' },
-      }
-    }
-
-    return {
-      endpoint: 'database',
-      method: 'INSERT',
-      status: 500,
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    }
+export async function createTestTenant(tenantId: string): Promise<TestResult> {
+  // No-op since we removed multi-tenancy - return success for compatibility
+  return {
+    endpoint: 'database',
+    method: 'INSERT',
+    status: 200,
+    success: true,
+    data: { tenantId, message: 'Single tenant mode - no tenant creation needed' },
   }
 }
 
 export async function setupTestTenants(): Promise<void> {
-  // Create common test tenants that all tests can use
-  const testTenants = [
-    'tenant_basic',
-    'tenant_advanced',
-    'tenant_admin',
-    'tenant_ratelimit',
-    'tenant_bruteforce',
-    'tenant_refresh',
-    'tenant_authtest',
-    'tenant_quickauth',
-    'tenant_registration',
-    'tenant_001',
-  ]
-
-  for (const tenantId of testTenants) {
-    await createTestTenant(tenantId)
-  }
+  // No-op since we removed multi-tenancy
+  console.log('Single tenant mode - no tenant setup needed')
 }
 
 export function generateTestUser(suffix: string = '') {
@@ -134,7 +88,6 @@ export function generateTestUser(suffix: string = '') {
   return {
     email: `test${uniqueSuffix}@example.com`,
     password: 'SecurePass123!',
-    tenantId: `tenant_${suffix || '001'}`, // Use consistent tenant instead of unique per user
     role: 'user',
   }
 }
@@ -146,7 +99,6 @@ export function generateAdminUser(suffix: string = '') {
   return {
     email: `admin${uniqueSuffix}@example.com`,
     password: 'AdminSecure123!',
-    tenantId: `tenant_${suffix || '001'}`, // Use consistent tenant instead of unique per user
     role: 'admin',
   }
 }
