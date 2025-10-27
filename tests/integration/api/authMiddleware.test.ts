@@ -2,7 +2,7 @@ import { testEndpoint, generateTestUser } from '../../helpers/testUtils'
 
 /**
  * Integration tests for authentication middleware and protected routes
- * Tests JWT validation, role-based access, and tenant isolation
+ * Tests JWT validation, role-based access, and authentication flows
  */
 async function testAuthenticationMiddleware() {
   console.log('🔐 Testing Authentication Middleware & Protected Routes\n')
@@ -17,7 +17,6 @@ async function testAuthenticationMiddleware() {
 
   const userRegResult = await testEndpoint('/v1/auth/register', 'POST', {
     ...testUser,
-    tenantId: 'tenant_authtest',
     role: 'user',
   })
 
@@ -28,7 +27,6 @@ async function testAuthenticationMiddleware() {
   const userLoginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: testUser.email,
     password: testUser.password,
-    tenantId: 'tenant_authtest',
   })
 
   if (userLoginResult.status === 200 && userLoginResult.data?.data?.accessToken) {
@@ -43,7 +41,6 @@ async function testAuthenticationMiddleware() {
 
   const adminRegResult = await testEndpoint('/v1/auth/register', 'POST', {
     ...adminUser,
-    tenantId: 'tenant_admin',
     role: 'admin',
   })
 
@@ -56,7 +53,6 @@ async function testAuthenticationMiddleware() {
   const adminLoginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: adminUser.email,
     password: adminUser.password,
-    tenantId: 'tenant_admin',
   })
 
   if (adminLoginResult.status === 200 && adminLoginResult.data?.data?.accessToken) {
@@ -113,7 +109,6 @@ async function testAuthenticationMiddleware() {
       console.log(`   User ID: ${userAuthResult.data.user?.id}`)
       console.log(`   Email: ${userAuthResult.data.user?.email}`)
       console.log(`   Role: ${userAuthResult.data.user?.role}`)
-      console.log(`   Tenant: ${userAuthResult.data.user?.tenantId}`)
     }
     console.log('')
     results.push({ name: 'user auth success', success: userAuthSuccess })
@@ -179,29 +174,8 @@ async function testAuthenticationMiddleware() {
     results.push({ name: 'admin access success', success: false })
   }
 
-  // Test 9: Test tenant isolation
-  console.log('8. Testing tenant isolation...')
-  if (userToken) {
-    const tenantResult = await testEndpoint('/v1/users/tenant-info', 'GET', null, {
-      Authorization: `Bearer ${userToken}`,
-    })
-
-    const tenantSuccess = tenantResult.status === 200
-    console.log(
-      `${tenantSuccess ? '✅' : '❌'} GET /v1/users/tenant-info (user token) - ${tenantResult.status} (Expected: 200)`
-    )
-    if (tenantResult.data) {
-      console.log(`   Tenant ID: ${tenantResult.data.tenantId}`)
-      console.log(`   User count in tenant: ${tenantResult.data.userCount}`)
-    }
-    console.log('')
-    results.push({ name: 'tenant isolation', success: tenantSuccess })
-  } else {
-    results.push({ name: 'tenant isolation', success: false })
-  }
-
-  // Test 10: Test token validation details
-  console.log('9. Testing token validation details...')
+  // Test 9: Test token validation details
+  console.log('8. Testing token validation details...')
   if (userToken) {
     const tokenTestResult = await testEndpoint(
       '/v1/users/test-auth',
