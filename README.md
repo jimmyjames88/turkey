@@ -11,7 +11,7 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
 - **🔐 ES256 JWT Authentication** - Elliptic Curve Digital Signature Algorithm for enhanced security
 - **🔄 Refresh Token Rotation** - Automatic token rotation with replay attack protection
 - **🔑 JWKS Support** - Public key distribution via JSON Web Key Set
-- **🎯 App-Specific Tokens** - JWT audience claims for application isolation
+- **🎯 App-Specific Tokens** - AppId-based JWT isolation for multi-application support
 - **⚡ Rate Limiting & Brute Force Protection** - Comprehensive request throttling and account lockout
 - **🧹 Input Validation & Sanitization** - XSS protection with Zod schemas and DOMPurify
 - **📊 Standardized Error Handling** - Consistent error responses with detailed error codes
@@ -484,12 +484,13 @@ Health check endpoint.
 - Content-type validation for POST/PUT/PATCH requests
 - Request size limits (default: 100KB)
 
-### App-Specific JWT Audiences
+### App-Specific JWT Tokens
 
-- Token isolation between different applications
+- Token isolation between different applications using appId parameter
 - Prevents cross-app token usage for enhanced security
-- Optional audience parameter in all auth endpoints
-- Audience validation with alphanumeric + underscore/hyphen pattern
+- **Required** appId parameter in all auth endpoints (login, register, refresh)
+- AppId validation with alphanumeric + underscore/hyphen pattern
+- AppId maps to JWT 'aud' (audience) claim for standards compliance
 
 ### Password Requirements
 
@@ -530,7 +531,7 @@ DATABASE_URL=postgresql://user:password@localhost:5432/turkey_dev
 
 # JWT Configuration
 JWT_ISSUER=https://your-domain.com
-JWT_AUDIENCE=your-api-audience
+JWT_AUDIENCE=your-default-app-id    # Default appId when not specified in requests
 ACCESS_TOKEN_TTL=900        # 15 minutes
 REFRESH_TOKEN_TTL=7776000   # 90 days
 
@@ -584,7 +585,7 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 1. **ES256 JWT Tokens** - Asymmetric signing for enhanced security
 2. **Short-lived Access Tokens** - 15-minute expiration
 3. **Rotating Refresh Tokens** - 90-day expiration with rotation
-4. **App-Specific Tokens** - JWT audience claims for application isolation
+4. **App-Specific Tokens** - Required appId parameter for application isolation via JWT audience claims
 5. **Role-based Access Control** - User and admin roles
 6. **Token Version Checking** - Global logout capability
 
