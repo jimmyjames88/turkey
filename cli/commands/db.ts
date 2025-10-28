@@ -59,7 +59,7 @@ dbCommands
   .action(async () => {
     try {
       const { db } = await import('../../src/db')
-      const { users, refreshTokens, keys, audit, tenants } = await import('../../src/db/schema')
+      const { users, refreshTokens, keys, audit } = await import('../../src/db/schema')
       const { sql } = await import('drizzle-orm')
 
       console.log('📊 Database Statistics:\n')
@@ -77,22 +77,13 @@ dbCommands
       tableCheck.forEach(row => console.log(`  - ${row.table_name}`))
       console.log('')
 
-      // Try to get counts for each table
+      // Get counts for each table
       try {
         const [userCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users)
         console.log(`👥 Users: ${userCount.count}`)
       } catch (err) {
         console.log(
           `👥 Users: ❌ Table not accessible (${err instanceof Error ? err.message : err})`
-        )
-      }
-
-      try {
-        const [tenantCount] = await db.select({ count: sql<number>`count(*)::int` }).from(tenants)
-        console.log(`🏢 Tenants: ${tenantCount.count}`)
-      } catch (err) {
-        console.log(
-          `🏢 Tenants: ❌ Table not accessible (${err instanceof Error ? err.message : err})`
         )
       }
 
@@ -123,18 +114,6 @@ dbCommands
         console.log(
           `📋 Audit Logs: ❌ Table not accessible (${err instanceof Error ? err.message : err})`
         )
-      }
-
-      // Total user count
-      const totalUsers = await db
-        .select({
-          count: sql<number>`count(*)::int`,
-        })
-        .from(users)
-
-      if (totalUsers.length > 0) {
-        console.log('\n👥 Total Users:')
-        console.log(`   ${totalUsers[0].count} users`)
       }
 
       process.exit(0)

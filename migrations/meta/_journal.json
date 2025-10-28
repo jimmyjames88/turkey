@@ -8,6 +8,13 @@
       "when": 1759980447632,
       "tag": "0000_ordinary_firebird",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1730000000000,
+      "tag": "0001_remove_tenants",
+      "breakpoints": true
     }
   ]
 }
