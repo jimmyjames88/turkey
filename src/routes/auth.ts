@@ -35,8 +35,7 @@ const loginSchema = z.object({
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'App ID must contain only letters, numbers, underscores, and hyphens'
-    )
-    .optional(),
+    ),
 })
 
 const refreshSchema = z.object({
@@ -48,8 +47,7 @@ const refreshSchema = z.object({
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'App ID must contain only letters, numbers, underscores, and hyphens'
-    )
-    .optional(),
+    ),
 })
 
 const registerSchema = z.object({
@@ -63,8 +61,7 @@ const registerSchema = z.object({
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'App ID must contain only letters, numbers, underscores, and hyphens'
-    )
-    .optional(),
+    ),
 })
 
 /**
