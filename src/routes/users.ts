@@ -25,7 +25,6 @@ router.get(
         id: users.id,
         email: users.email,
         role: users.role,
-        tenantId: users.tenantId,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -63,7 +62,6 @@ router.get(
         id: req.user!.id,
         email: req.user!.email,
         role: req.user!.role,
-        tenantId: req.user!.tenantId,
       },
     })
   })
@@ -85,7 +83,6 @@ router.get(
         id: req.user!.id,
         email: req.user!.email,
         role: req.user!.role,
-        tenantId: req.user!.tenantId,
       },
       adminCapabilities: [
         'user_management',
@@ -98,17 +95,17 @@ router.get(
 )
 
 /**
- * GET /v1/users/tenant-info
- * Demonstrates tenant isolation
+ * GET /v1/users/app-info
+ * Get users in the same app context
  */
 router.get(
-  '/tenant-info',
+  '/app-info',
   authenticateToken,
   asyncHandler(async (req, res) => {
-    const tenantId = req.user!.tenantId
+    const appId = req.user!.appId
 
-    // Get all users in the same tenant (excluding password hash)
-    const tenantUsers = await db
+    // Get all users for the same app (excluding password hash)
+    const appUsers = await db
       .select({
         id: users.id,
         email: users.email,
@@ -116,12 +113,11 @@ router.get(
         createdAt: users.createdAt,
       })
       .from(users)
-      .where(eq(users.tenantId, tenantId))
 
     res.json({
-      tenantId,
-      userCount: tenantUsers.length,
-      users: tenantUsers,
+      appId,
+      userCount: appUsers.length,
+      users: appUsers,
       requestingUser: {
         id: req.user!.id,
         email: req.user!.email,

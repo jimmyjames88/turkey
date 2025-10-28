@@ -17,7 +17,7 @@ export interface LogEntry {
     ip: string
     userAgent?: string
     userId?: string
-    tenantId?: string
+    appId?: string
   }
   response?: {
     statusCode: number
@@ -143,7 +143,7 @@ class Logger {
         ip: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: req.get('User-Agent'),
         userId: (req as any).user?.id,
-        tenantId: (req as any).user?.tenantId,
+        appId: (req as any).user?.appId,
       },
       response: {
         statusCode: res.statusCode,
@@ -221,7 +221,7 @@ export function errorLoggingMiddleware(
       ip: req.ip || req.connection.remoteAddress,
       userAgent: req.get('User-Agent'),
       userId: (req as any).user?.id,
-      tenantId: (req as any).user?.tenantId,
+      appId: (req as any).user?.appId,
     },
   })
 
@@ -235,7 +235,7 @@ export function auditLog(event: string, req: Request, meta?: Record<string, any>
   logger.info(`Audit: ${event}`, {
     ...meta,
     userId: (req as any).user?.id,
-    tenantId: (req as any).user?.tenantId,
+    appId: (req as any).user?.appId,
     ip: req.ip || req.connection.remoteAddress,
     userAgent: req.get('User-Agent'),
     timestamp: new Date().toISOString(),

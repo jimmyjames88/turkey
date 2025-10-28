@@ -52,7 +52,6 @@ export enum ErrorCode {
   // Business Logic
   INVALID_GRANT = 'invalid_grant',
   INVALID_OPERATION = 'invalid_operation',
-  TENANT_ACCESS_DENIED = 'tenant_access_denied',
 
   // Media & Content
   UNSUPPORTED_MEDIA_TYPE = 'unsupported_media_type',
@@ -281,10 +280,7 @@ export const errorHelpers = {
       ErrorCode.INSUFFICIENT_PERMISSIONS
     ),
 
-  tenantAccessDenied: (message: string = 'Access denied: resource belongs to a different tenant') =>
-    new AppError(message, 403, ErrorCode.TENANT_ACCESS_DENIED),
-
-  userExists: (message: string = 'User already exists in this tenant') =>
+  userExists: (message: string = 'User already exists') =>
     new AppError(message, 409, ErrorCode.USER_EXISTS),
 
   invalidCredentials: (message: string = 'Invalid email or password') =>

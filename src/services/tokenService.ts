@@ -45,7 +45,6 @@ export async function createAccessToken(
     aud: tokenAudience,
     sub: user.id,
     email: user.email, // Add email to payload
-    tenantId: user.tenantId,
     role: user.role,
     scope: scope || '',
     jti,

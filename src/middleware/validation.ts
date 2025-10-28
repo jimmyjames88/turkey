@@ -52,17 +52,6 @@ export const commonSchemas = {
       'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
     ),
 
-  // Tenant ID validation
-  tenantId: z
-    .string()
-    .min(1, 'Tenant ID is required')
-    .max(50, 'Tenant ID too long')
-    .regex(
-      /^[a-zA-Z0-9_-]+$/,
-      'Tenant ID can only contain letters, numbers, underscores, and hyphens'
-    )
-    .transform(val => val.toLowerCase().trim()),
-
   // Role validation
   role: z.enum(['user', 'admin'], {
     errorMap: () => ({ message: 'Role must be either "user" or "admin"' }),
@@ -180,13 +169,11 @@ export const validationSchemas = {
   login: z.object({
     email: commonSchemas.email,
     password: z.string().min(1, 'Password is required'),
-    tenantId: commonSchemas.tenantId,
   }),
 
   register: z.object({
     email: commonSchemas.email,
     password: commonSchemas.password,
-    tenantId: commonSchemas.tenantId,
     role: commonSchemas.role.optional().default('user'),
   }),
 
@@ -214,10 +201,6 @@ export const validationSchemas = {
   // Route parameters
   userParams: z.object({
     userId: commonSchemas.uuid,
-  }),
-
-  tenantParams: z.object({
-    tenantId: commonSchemas.tenantId,
   }),
 }
 

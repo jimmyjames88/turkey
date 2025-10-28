@@ -12,7 +12,7 @@ declare global {
         id: string
         email: string
         role: string
-        tenantId: string
+        appId: string
         tokenVersion: number
         jti: string
         iat: number
@@ -152,9 +152,9 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
     })
 
     // Extract required claims
-    const { sub, email, role, tenantId, tokenVersion, jti, iat, exp } = payload
+    const { sub, email, role, aud, tokenVersion, jti, iat, exp } = payload
 
-    if (!sub || !email || !role || !tenantId || tokenVersion === undefined || !jti) {
+    if (!sub || !email || !role || !aud || tokenVersion === undefined || !jti) {
       return res.status(401).json({
         error: 'invalid_token',
         message: 'Token is missing required claims',
@@ -186,7 +186,7 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
       id: sub as string,
       email: email as string,
       role: role as string,
-      tenantId: tenantId as string,
+      appId: aud as string,
       tokenVersion: tokenVersion as number,
       jti: jti as string,
       iat: iat as number,
@@ -273,32 +273,6 @@ export function requireRole(...roles: string[]) {
       return res.status(403).json({
         error: 'insufficient_permissions',
         message: `Required role: ${roles.join(' or ')}. Current role: ${req.user.role}`,
-      })
-    }
-
-    next()
-  }
-}
-
-/**
- * Tenant isolation middleware
- * Ensures user can only access resources in their tenant
- */
-export function requireSameTenant(getTenantId: (req: Request) => string) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({
-        error: 'authentication_required',
-        message: 'Authentication is required for this endpoint',
-      })
-    }
-
-    const requestedTenantId = getTenantId(req)
-
-    if (req.user.tenantId !== requestedTenantId) {
-      return res.status(403).json({
-        error: 'tenant_access_denied',
-        message: 'Access denied: resource belongs to a different tenant',
       })
     }
 
