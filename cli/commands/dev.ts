@@ -52,7 +52,6 @@ devCommands
             email: 'admin@turkey.local',
             passwordHash,
             role: 'admin',
-            tenantId: 'default',
           })
           .returning({
             id: users.id,
@@ -85,9 +84,8 @@ devCommands
   .description('Create a test user for development')
   .option('-e, --email <email>', 'User email', 'test@example.com')
   .option('-p, --password <password>', 'User password', 'test123')
-  .option('-t, --tenant <tenant>', 'Tenant ID', 'default')
   .option('-r, --role <role>', 'User role', 'user')
-  .action(async (options: { email: string; password: string; tenant: string; role: string }) => {
+  .action(async (options: { email: string; password: string; role: string }) => {
     try {
       const { db } = await import('../../src/db')
       const { users } = await import('../../src/db/schema')
@@ -110,20 +108,17 @@ devCommands
           email: options.email,
           passwordHash,
           role: options.role,
-          tenantId: options.tenant,
         })
         .returning({
           id: users.id,
           email: users.email,
           role: users.role,
-          tenantId: users.tenantId,
         })
 
       console.log('✅ Test user created successfully:')
       console.log(`   📧 Email: ${newUser.email}`)
       console.log(`   🔑 Password: ${options.password}`)
       console.log(`   👤 Role: ${newUser.role}`)
-      console.log(`   🏢 Tenant: ${newUser.tenantId}`)
       console.log(`   🆔 ID: ${newUser.id}`)
 
       process.exit(0)

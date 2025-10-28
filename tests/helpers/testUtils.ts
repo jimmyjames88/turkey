@@ -65,20 +65,20 @@ export function logTestResult(result: TestResult): void {
   console.log('')
 }
 
-export async function createTestTenant(tenantId: string): Promise<TestResult> {
-  // No-op since we removed multi-tenancy - return success for compatibility
+export async function createTestApp(appId: string): Promise<TestResult> {
+  // No-op since we simplified to app-based architecture - return success for compatibility
   return {
     endpoint: 'database',
     method: 'INSERT',
     status: 200,
     success: true,
-    data: { tenantId, message: 'Single tenant mode - no tenant creation needed' },
+    data: { appId, message: 'Single app mode - no app creation needed' },
   }
 }
 
-export async function setupTestTenants(): Promise<void> {
-  // No-op since we removed multi-tenancy
-  console.log('Single tenant mode - no tenant setup needed')
+export async function setupTestApps(): Promise<void> {
+  // No-op since we simplified to app-based architecture
+  console.log('Single app mode - no app setup needed')
 }
 
 export function generateTestUser(suffix: string = '') {

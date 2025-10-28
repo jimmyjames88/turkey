@@ -125,21 +125,16 @@ dbCommands
         )
       }
 
-      // Users by tenant
-      const tenantStats = await db
+      // Total user count
+      const totalUsers = await db
         .select({
-          tenantId: users.tenantId,
           count: sql<number>`count(*)::int`,
         })
         .from(users)
-        .groupBy(users.tenantId)
-        .orderBy(users.tenantId)
 
-      if (tenantStats.length > 0) {
-        console.log('\n🏢 Users by Tenant:')
-        tenantStats.forEach(stat => {
-          console.log(`   ${stat.tenantId}: ${stat.count} users`)
-        })
+      if (totalUsers.length > 0) {
+        console.log('\n👥 Total Users:')
+        console.log(`   ${totalUsers[0].count} users`)
       }
 
       process.exit(0)

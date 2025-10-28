@@ -16,7 +16,6 @@ async function testAppAudiences() {
     // Test login with specific audience
     async () => {
       const user = generateTestUser('aud1')
-      user.tenantId = 'tenant_001' // Use existing tenant
 
       // Register user first
       await testEndpoint('/v1/auth/register', 'POST', user)
@@ -25,7 +24,6 @@ async function testAppAudiences() {
       const loginData = {
         email: user.email,
         password: user.password,
-        tenantId: user.tenantId,
         audience: 'my_blog',
       }
 
@@ -53,7 +51,6 @@ async function testAppAudiences() {
     // Test login with different audiences for different apps
     async () => {
       const user = generateTestUser('aud2')
-      user.tenantId = 'tenant_001' // Use existing tenant
 
       // Register user
       await testEndpoint('/v1/auth/register', 'POST', user)
@@ -62,7 +59,6 @@ async function testAppAudiences() {
       const photosLogin = await testEndpoint('/v1/auth/login', 'POST', {
         email: user.email,
         password: user.password,
-        tenantId: user.tenantId,
         audience: 'my_photos',
       })
 
@@ -70,7 +66,6 @@ async function testAppAudiences() {
       const financeLogin = await testEndpoint('/v1/auth/login', 'POST', {
         email: user.email,
         password: user.password,
-        tenantId: user.tenantId,
         audience: 'my_finance',
       })
 
@@ -114,7 +109,6 @@ async function testAppAudiences() {
     // Test default audience when not specified
     async () => {
       const user = generateTestUser('aud3')
-      user.tenantId = 'tenant_001' // Use existing tenant
 
       // Register user
       await testEndpoint('/v1/auth/register', 'POST', user)
@@ -123,7 +117,6 @@ async function testAppAudiences() {
       const result = await testEndpoint('/v1/auth/login', 'POST', {
         email: user.email,
         password: user.password,
-        tenantId: user.tenantId,
         // No audience specified
       })
 
@@ -146,7 +139,6 @@ async function testAppAudiences() {
     // Test invalid audience format rejection
     async () => {
       const user = generateTestUser('aud4')
-      user.tenantId = 'tenant_001' // Use existing tenant
 
       // Register user
       await testEndpoint('/v1/auth/register', 'POST', user)
@@ -155,7 +147,6 @@ async function testAppAudiences() {
       const result = await testEndpoint('/v1/auth/login', 'POST', {
         email: user.email,
         password: user.password,
-        tenantId: user.tenantId,
         audience: 'my blog', // Invalid: contains space
       })
 
@@ -174,7 +165,6 @@ async function testAppAudiences() {
     // Test refresh with audience
     async () => {
       const user = generateTestUser('aud5')
-      user.tenantId = 'tenant_001' // Use existing tenant
 
       // Register user
       await testEndpoint('/v1/auth/register', 'POST', user)
@@ -183,7 +173,6 @@ async function testAppAudiences() {
       const loginResult = await testEndpoint('/v1/auth/login', 'POST', {
         email: user.email,
         password: user.password,
-        tenantId: user.tenantId,
         audience: 'my_blog',
       })
 
@@ -221,7 +210,6 @@ async function testAppAudiences() {
     // Test register with audience
     async () => {
       const user = generateTestUser('finance_reg')
-      user.tenantId = 'tenant_001' // Use existing tenant
       const userData = {
         ...user,
         audience: 'my_finance',
@@ -235,7 +223,6 @@ async function testAppAudiences() {
         const loginResult = await testEndpoint('/v1/auth/login', 'POST', {
           email: user.email,
           password: user.password,
-          tenantId: user.tenantId,
           audience: 'my_finance',
         })
 

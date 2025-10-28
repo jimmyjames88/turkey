@@ -9,7 +9,6 @@ async function testAdvancedFlow() {
 
   // Generate consistent test user data
   const testUser = generateTestUser('advanced')
-  testUser.tenantId = 'tenant_advanced' // Override tenant for this test
 
   let userData: any = null
   let loginData: any = null
@@ -36,7 +35,6 @@ async function testAdvancedFlow() {
   const loginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: testUser.email,
     password: testUser.password,
-    tenantId: testUser.tenantId,
   })
   logTestResult(loginResult)
 
@@ -91,7 +89,6 @@ async function testAdvancedFlow() {
   const freshLoginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: testUser.email,
     password: testUser.password,
-    tenantId: testUser.tenantId,
   })
   logTestResult(freshLoginResult)
 
