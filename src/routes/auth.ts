@@ -13,6 +13,7 @@ import {
   revokeAllUserRefreshTokens,
 } from '@/services/refreshTokenService'
 import { revocationService } from '@/services/revocationService'
+import { requireServiceApiKey } from '@/middleware/serviceAuth'
 import {
   loginRateLimit,
   refreshRateLimit,
@@ -258,9 +259,11 @@ export default router
 /**
  * POST /v1/auth/introspect
  * Introspect an access or refresh token. Accepts { token: string }
+ * Protected by service API key - backend services only
  */
 router.post(
   '/introspect',
+  requireServiceApiKey,
   asyncHandler(async (req, res) => {
     const { token } = req.body as { token?: string }
     if (!token) return res.status(400).json({ error: 'Missing token' })
@@ -344,9 +347,11 @@ router.post(
  * POST /v1/auth/revocation-check
  * Check if a token (by JTI) has been revoked
  * Used by middleware to validate tokens
+ * Protected by service API key - backend services only
  */
 router.post(
   '/revocation-check',
+  requireServiceApiKey,
   asyncHandler(async (req, res) => {
     const { jti } = req.body as { jti?: string }
     if (!jti) {
