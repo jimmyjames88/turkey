@@ -282,9 +282,9 @@ router.post(
     }
 
     // Try access token verification via JWKS
-
     try {
       // Use JWKS verification via jwksService
+      // Don't validate audience - introspect should work for any app's tokens
       const { verifyTokenWithJwks } = await import('@/services/jwksService')
       const payload = await verifyTokenWithJwks(token)
       return res.json({ data: { active: true, type: 'access', payload } })

@@ -5,23 +5,32 @@ import type { JWTPayload } from '@/types'
 
 /**
  * Verify a JWT using the active public keys (builds a temporary JWKS)
+ * @param token - The JWT token to verify
+ * @param expectedAudience - Optional expected audience (appId) to validate against
  */
-export async function verifyTokenWithJwks(token: string): Promise<JWTPayload> {
+export async function verifyTokenWithJwks(
+  token: string,
+  expectedAudience?: string
+): Promise<JWTPayload> {
   const activeKeys = await getActivePublicKeys()
 
   // Try each key until one verifies
   for (const key of activeKeys) {
     try {
       const pub = await importSPKIJ(key.publicPem, key.alg)
-      const { payload } = await jwtVerify(
-        token,
-        pub as any,
-        {
-          issuer: process.env.JWT_ISSUER || 'http://localhost:3000',
-          audience: process.env.JWT_AUDIENCE || undefined,
-          algorithms: [key.alg],
-        } as any
-      )
+
+      const verifyOptions: any = {
+        issuer: process.env.JWT_ISSUER || 'http://localhost:3000',
+        algorithms: [key.alg],
+      }
+
+      // Only validate audience if explicitly provided
+      // This allows the introspect endpoint to accept any app's tokens
+      if (expectedAudience) {
+        verifyOptions.audience = expectedAudience
+      }
+
+      const { payload } = await jwtVerify(token, pub as any, verifyOptions)
 
       return payload as unknown as JWTPayload
     } catch (err) {
