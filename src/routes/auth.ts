@@ -116,7 +116,7 @@ router.post(
   refreshRateLimit,
   validateRequest(refreshSchema),
   asyncHandler(async (req, res) => {
-    const { refreshToken, audience } = req.body
+    const { refreshToken, appId } = req.body
 
     // Validate refresh token
     const storedToken = await validateRefreshToken(refreshToken)
@@ -132,7 +132,7 @@ router.post(
     }
 
     // Create new token pair with app-specific audience
-    const newTokenPair = await createTokenPair(user, '', audience)
+    const newTokenPair = await createTokenPair(user, '', appId)
 
     // Rotate refresh token
     await rotateRefreshToken(storedToken.id, newTokenPair.refreshToken, user.id)
@@ -206,7 +206,7 @@ router.post(
   registrationRateLimit,
   validateRequest(registerSchema),
   asyncHandler(async (req, res) => {
-    const { email, password, role, audience } = req.body
+    const { email, password, role, appId } = req.body
 
     // Validate password strength
     const passwordValidation = validatePassword(password)
@@ -234,7 +234,7 @@ router.post(
       .returning()
 
     // Create initial token pair with app-specific audience
-    const tokenPair = await createTokenPair(newUser, '', audience)
+    const tokenPair = await createTokenPair(newUser, '', appId)
 
     // Store refresh token
     await storeRefreshToken(tokenPair.refreshToken, newUser.id)
