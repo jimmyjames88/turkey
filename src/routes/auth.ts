@@ -12,6 +12,7 @@ import {
   revokeRefreshToken,
   revokeAllUserRefreshTokens,
 } from '@/services/refreshTokenService'
+import { revocationService } from '@/services/revocationService'
 import {
   loginRateLimit,
   refreshRateLimit,
@@ -296,35 +297,71 @@ router.post(
 
 /**
  * POST /v1/auth/revoke
- * Revoke a refresh or access token (primarily refresh tokens)
+ * Revoke a specific access or refresh token
+ * For access tokens, uses JTI-based revocation
+ * For refresh tokens, removes from database
  */
 router.post(
   '/revoke',
   asyncHandler(async (req, res) => {
-    const { token } = req.body as { token?: string }
+    const { token, reason } = req.body as { token?: string; reason?: string }
     if (!token) return res.status(400).json({ error: 'Missing token' })
 
-    // Attempt to revoke refresh token
+    // Try refresh token first
     const stored = await validateRefreshToken(token)
     if (stored) {
       await revokeRefreshToken(stored.id)
-      return res.json({ message: 'Token revoked' })
+      return res.json({ message: 'Refresh token revoked' })
     }
-    // Access token revocation is approximated by incrementing tokenVersion for the user if token valid
+
+    // Try access token - verify and revoke by JTI
     try {
       const { verifyTokenWithJwks } = await import('@/services/jwksService')
       const payload = await verifyTokenWithJwks(token)
-      // Increment tokenVersion to invalidate all access tokens for this user
-      await db
-        .update(users)
-        .set({ tokenVersion: payload.tokenVersion + 1 })
-        .where(eq(users.id, payload.sub))
-      // Also revoke all refresh tokens
-      await revokeAllUserRefreshTokens(payload.sub)
-      return res.json({ message: 'Access invalidated and refresh tokens revoked' })
+
+      if (!payload.jti) {
+        return res.status(400).json({ error: 'Token missing JTI claim' })
+      }
+
+      // Store revocation
+      await revocationService.revokeToken({
+        jti: payload.jti,
+        userId: payload.sub,
+        appId: payload.aud,
+        revokedAt: Date.now(),
+        expiresAt: payload.exp * 1000,
+        reason,
+      })
+
+      return res.json({ message: 'Access token revoked' })
     } catch (err) {
-      // Nothing we can revoke
-      return res.status(400).json({ error: 'Token not recognized' })
+      return res.status(400).json({ error: 'Invalid or unrecognized token' })
     }
+  })
+)
+
+/**
+ * POST /v1/auth/revocation-check
+ * Check if a token (by JTI) has been revoked
+ * Used by middleware to validate tokens
+ */
+router.post(
+  '/revocation-check',
+  asyncHandler(async (req, res) => {
+    const { jti } = req.body as { jti?: string }
+    if (!jti) {
+      return res.status(400).json({ error: 'Missing jti parameter' })
+    }
+
+    const isRevoked = await revocationService.isRevoked(jti)
+    const revokedData = isRevoked ? await revocationService.getRevokedToken(jti) : null
+
+    res.json({
+      revoked: isRevoked,
+      ...(revokedData && {
+        revokedAt: revokedData.revokedAt,
+        reason: revokedData.reason,
+      }),
+    })
   })
 )

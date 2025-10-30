@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express'
 import { jwtVerify, createRemoteJWKSet, JWTPayload } from 'jose'
 import { db } from '@/db'
-import { users, revokedJti } from '@/db/schema'
+import { users } from '@/db/schema'
 import { eq } from 'drizzle-orm'
+import { revocationService } from '@/services/revocationService'
 
 // Extend Express Request type to include user context
 declare global {
@@ -75,28 +76,11 @@ function extractBearerToken(authHeader: string | undefined): string | null {
 }
 
 /**
- * Check if a JTI is in the revoked list
+ * Check if a JTI has been revoked
  */
 async function isJtiRevoked(jti: string): Promise<boolean> {
   try {
-    const [revokedToken] = await db
-      .select()
-      .from(revokedJti)
-      .where(eq(revokedJti.jti, jti))
-      .limit(1)
-
-    if (!revokedToken) {
-      return false
-    }
-
-    // Check if the revocation has expired
-    if (revokedToken.expiresAt && new Date() > revokedToken.expiresAt) {
-      // Clean up expired revocation
-      await db.delete(revokedJti).where(eq(revokedJti.jti, jti))
-      return false
-    }
-
-    return true
+    return await revocationService.isRevoked(jti)
   } catch (error) {
     console.error('Error checking JTI revocation:', error)
     // In case of error, assume not revoked to avoid breaking auth
@@ -161,15 +145,13 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
       })
     }
 
-    // Check if JTI is revoked (optional, based on security requirements)
-    if (process.env.ENABLE_JTI_DENYLIST === 'true') {
-      const isRevoked = await isJtiRevoked(jti as string)
-      if (isRevoked) {
-        return res.status(401).json({
-          error: 'token_revoked',
-          message: 'Token has been revoked',
-        })
-      }
+    // Check if JTI is revoked
+    const isRevoked = await isJtiRevoked(jti as string)
+    if (isRevoked) {
+      return res.status(401).json({
+        error: 'token_revoked',
+        message: 'Token has been revoked',
+      })
     }
 
     // Validate token version against user's current version
