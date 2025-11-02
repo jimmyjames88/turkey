@@ -498,6 +498,57 @@ Health check endpoint.
 - Must contain: uppercase, lowercase, number, special character
 - Maximum 128 characters
 
+### Service API Key Protection
+
+Protect sensitive backend-to-backend endpoints with service API keys.
+
+**Protected Endpoints:**
+
+- `POST /v1/auth/introspect` - Token introspection
+- `POST /v1/auth/revocation-check` - Token revocation status
+
+**Configuration:**
+
+```bash
+# Set in environment variables
+TURKEY_SERVICE_API_KEY=your-secret-api-key-here
+```
+
+**Usage:**
+
+Include the service API key in requests to protected endpoints:
+
+```bash
+curl -X POST http://localhost:3000/v1/auth/introspect \
+  -H "Content-Type: application/json" \
+  -H "X-Turkey-Service-Key: your-secret-api-key-here" \
+  -d '{"token": "eyJ..."}'
+```
+
+**Security Features:**
+
+- Constant-time comparison to prevent timing attacks
+- 401 error for missing API key (when configured)
+- 403 error for invalid API key
+- Backward compatible: if `TURKEY_SERVICE_API_KEY` is not set, endpoints remain unprotected
+
+**Best Practices:**
+
+- Use cryptographically secure random strings (min 32 characters)
+- Rotate keys periodically
+- Store in environment variables, never in code
+- Use different keys for different environments
+
+**Generate a Secure Key:**
+
+```bash
+# Using OpenSSL
+openssl rand -hex 32
+
+# Using Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
 ## 🔧 Available Scripts
 
 ```bash
