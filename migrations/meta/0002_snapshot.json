@@ -1,0 +1,14 @@
+{
+  "id": "0002_email_tokens",
+  "prevId": "0001_remove_tenants",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {},
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

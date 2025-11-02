@@ -13,7 +13,20 @@ import {
   revokeAllUserRefreshTokens,
 } from '@/services/refreshTokenService'
 import { revocationService } from '@/services/revocationService'
+import {
+  createEmailToken,
+  validateToken,
+  markTokenAsUsed,
+  invalidateUserTokens,
+  getUserActiveTokenCount,
+} from '@/services/emailTokenService'
+import {
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  sendWelcomeEmail,
+} from '@/services/emailService'
 import { requireServiceApiKey } from '@/middleware/serviceAuth'
+import config from '@/config'
 import {
   loginRateLimit,
   refreshRateLimit,
@@ -66,6 +79,23 @@ const registerSchema = z.object({
     ),
 })
 
+const requestPasswordResetSchema = z.object({
+  email: commonSchemas.email,
+})
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  newPassword: commonSchemas.password,
+})
+
+const verifyEmailSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+})
+
+const resendVerificationSchema = z.object({
+  email: commonSchemas.email,
+})
+
 /**
  * POST /v1/auth/login
  * Authenticate user and return access + refresh tokens
@@ -85,6 +115,13 @@ router.post(
       // Record failed attempt
       recordLoginAttempt(false)(req, res, () => {})
       throw errorHelpers.invalidCredentials()
+    }
+
+    // Check if email verification is required
+    if (config.email.requireEmailVerification && !user.emailVerified) {
+      throw errorHelpers.forbidden(
+        'Email verification required. Please check your email for a verification link.'
+      )
     }
 
     // Create token pair with app-specific audience
@@ -235,6 +272,18 @@ router.post(
       })
       .returning()
 
+    // Generate email verification token and send email
+    const { token: verificationToken } = await createEmailToken(newUser.id, 'email_verification')
+    const baseUrl = req.protocol + '://' + req.get('host')
+
+    try {
+      await sendEmailVerification(email, verificationToken, baseUrl)
+      console.log(`📧 Verification email sent to ${email}`)
+    } catch (error) {
+      console.error(`❌ Failed to send verification email to ${email}:`, error)
+      // Don't fail registration if email fails
+    }
+
     // Create initial token pair with app-specific audience
     const tokenPair = await createTokenPair(newUser, '', appId)
 
@@ -247,6 +296,7 @@ router.post(
           id: newUser.id,
           email: newUser.email,
           role: newUser.role,
+          emailVerified: newUser.emailVerified,
         },
         ...tokenPair,
       },
@@ -367,6 +417,210 @@ router.post(
         revokedAt: revokedData.revokedAt,
         reason: revokedData.reason,
       }),
+    })
+  })
+)
+
+/**
+ * POST /v1/auth/request-password-reset
+ * Request a password reset email
+ * Rate limited to prevent abuse
+ */
+router.post(
+  '/request-password-reset',
+  loginRateLimit, // Reuse login rate limit (5 per 15 min)
+  validateRequest(requestPasswordResetSchema),
+  asyncHandler(async (req, res) => {
+    const { email } = req.body
+
+    // Find user by email
+    const [user] = await db.select().from(users).where(eq(users.email, email))
+
+    // Always return success to prevent email enumeration
+    // But only send email if user exists
+    if (user) {
+      // Rate limit: max 3 password reset requests per hour per user
+      const tokenCount = await getUserActiveTokenCount(user.id, 'password_reset', 60)
+
+      if (tokenCount >= 3) {
+        // Still return success, but log the attempt
+        console.warn(`⚠️  Password reset rate limit exceeded for user ${user.id}`)
+      } else {
+        // Invalidate any existing password reset tokens for this user
+        await invalidateUserTokens(user.id, 'password_reset')
+
+        // Generate new token
+        const { token } = await createEmailToken(user.id, 'password_reset')
+
+        // Send password reset email
+        const baseUrl = req.protocol + '://' + req.get('host')
+        await sendPasswordResetEmail(email, token, baseUrl)
+
+        console.log(`📧 Password reset email sent to ${email}`)
+      }
+    }
+
+    // Always return success (prevents email enumeration)
+    res.json({
+      message: 'If an account exists with that email, a password reset link has been sent.',
+    })
+  })
+)
+
+/**
+ * POST /v1/auth/reset-password
+ * Complete password reset with token
+ */
+router.post(
+  '/reset-password',
+  validateRequest(resetPasswordSchema),
+  asyncHandler(async (req, res) => {
+    const { token, newPassword } = req.body
+
+    // Validate the token
+    const result = await validateToken(token, 'password_reset')
+
+    if (!result) {
+      throw errorHelpers.badRequest('Invalid or expired password reset token', 'INVALID_TOKEN')
+    }
+
+    const { userId, tokenId } = result
+
+    // Validate password strength
+    const passwordValidation = validatePassword(newPassword)
+    if (!passwordValidation.valid) {
+      throw errorHelpers.badRequest('Weak password', 'WEAK_PASSWORD')
+    }
+
+    // Hash new password
+    const passwordHash = await hashPassword(newPassword)
+
+    // Get current token version and increment it
+    const [currentUser] = await db.select().from(users).where(eq(users.id, userId))
+    const newTokenVersion = (currentUser?.tokenVersion || 0) + 1
+
+    // Update user's password and increment token version (invalidates all tokens)
+    await db
+      .update(users)
+      .set({
+        passwordHash,
+        tokenVersion: newTokenVersion,
+      })
+      .where(eq(users.id, userId))
+
+    // Revoke all refresh tokens
+    await markTokenAsUsed(tokenId)
+
+    // Revoke all refresh tokens (force re-login)
+    await revokeAllUserRefreshTokens(userId)
+
+    console.log(`✅ Password reset completed for user ${userId}`)
+
+    res.json({
+      message: 'Password has been reset successfully. Please log in with your new password.',
+    })
+  })
+)
+
+/**
+ * POST /v1/auth/verify-email
+ * Verify email address with token
+ */
+router.post(
+  '/verify-email',
+  validateRequest(verifyEmailSchema),
+  asyncHandler(async (req, res) => {
+    const { token } = req.body
+
+    // Validate the token
+    const result = await validateToken(token, 'email_verification')
+
+    if (!result) {
+      throw errorHelpers.badRequest('Invalid or expired email verification token', 'INVALID_TOKEN')
+    }
+
+    const { userId, tokenId } = result
+
+    // Mark email as verified
+    const [updatedUser] = await db
+      .update(users)
+      .set({ emailVerified: true })
+      .where(eq(users.id, userId))
+      .returning()
+
+    // Mark token as used
+    await markTokenAsUsed(tokenId)
+
+    // Send welcome email
+    try {
+      await sendWelcomeEmail(updatedUser.email)
+      console.log(`📧 Welcome email sent to ${updatedUser.email}`)
+    } catch (error) {
+      console.error(`❌ Failed to send welcome email:`, error)
+      // Don't fail verification if welcome email fails
+    }
+
+    console.log(`✅ Email verified for user ${userId}`)
+
+    res.json({
+      message: 'Email verified successfully!',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        emailVerified: updatedUser.emailVerified,
+      },
+    })
+  })
+)
+
+/**
+ * POST /v1/auth/resend-verification
+ * Resend email verification
+ * Rate limited to prevent abuse
+ */
+router.post(
+  '/resend-verification',
+  loginRateLimit, // Reuse login rate limit (5 per 15 min)
+  validateRequest(resendVerificationSchema),
+  asyncHandler(async (req, res) => {
+    const { email } = req.body
+
+    // Find user by email
+    const [user] = await db.select().from(users).where(eq(users.email, email))
+
+    // Always return success to prevent email enumeration
+    if (user) {
+      // Check if already verified
+      if (user.emailVerified) {
+        console.log(`ℹ️  Email already verified for ${email}`)
+        return res.json({
+          message: 'If your email is not verified, a new verification link has been sent.',
+        })
+      }
+
+      // Rate limit: max 3 verification emails per hour per user
+      const tokenCount = await getUserActiveTokenCount(user.id, 'email_verification', 60)
+
+      if (tokenCount >= 3) {
+        console.warn(`⚠️  Email verification rate limit exceeded for user ${user.id}`)
+      } else {
+        // Invalidate old tokens
+        await invalidateUserTokens(user.id, 'email_verification')
+
+        // Generate new token
+        const { token: verificationToken } = await createEmailToken(user.id, 'email_verification')
+
+        // Send verification email
+        const baseUrl = req.protocol + '://' + req.get('host')
+        await sendEmailVerification(email, verificationToken, baseUrl)
+
+        console.log(`📧 Verification email resent to ${email}`)
+      }
+    }
+
+    // Always return success (prevents email enumeration)
+    res.json({
+      message: 'If your email is not verified, a new verification link has been sent.',
     })
   })
 )

@@ -4,6 +4,7 @@ import { testAdvancedFlow } from './api/advancedFlow.test'
 import { testRateLimiting } from './api/rateLimiting.test'
 import { testAuthenticationMiddleware } from './api/authMiddleware.test'
 import { testAppAudiences } from './api/appAudiences.test'
+import { runEmailTests } from './email'
 // Using development database - no separate test database setup needed
 
 /**
@@ -77,6 +78,15 @@ async function runAllIntegrationTests() {
     console.log('🎯 SUITE 6: App-Specific JWT Audiences')
     console.log('--------------------------------------')
     results.appAudiences = await testAppAudiences()
+    console.log('\n')
+
+    // Small delay between suites
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // Run email integration tests
+    console.log('📧 SUITE 7: Email Integration')
+    console.log('-----------------------------')
+    await runEmailTests()
     console.log('\n')
 
     // Print summary

@@ -87,6 +87,32 @@ export const config = {
     encryptionKey: process.env.KEY_ENCRYPTION_SECRET, // For encrypting stored private keys
   },
 
+  // Email Configuration
+  email: {
+    // Email service selection: 'mailgun' | 'smtp' | undefined (disables email)
+    service: process.env.EMAIL_SERVICE as 'mailgun' | 'smtp' | undefined,
+    from: process.env.EMAIL_FROM || 'noreply@localhost',
+    fromName: process.env.EMAIL_FROM_NAME,
+    passwordResetTokenTTL: parseInt(process.env.PASSWORD_RESET_TOKEN_TTL || '3600', 10), // 1 hour
+    emailVerificationTokenTTL: parseInt(process.env.EMAIL_VERIFICATION_TOKEN_TTL || '172800', 10), // 48 hours
+    requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === 'true',
+  },
+
+  // Mailgun Configuration
+  mailgun: {
+    apiKey: process.env.MAILGUN_API_KEY || '',
+    domain: process.env.MAILGUN_DOMAIN || '',
+  },
+
+  // SMTP Configuration
+  smtp: {
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    user: process.env.SMTP_USER || '',
+    password: process.env.SMTP_PASSWORD || '',
+  },
+
   // Logging
   logging: {
     level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),

@@ -18,6 +18,7 @@ export const users = pgTable(
     email: varchar('email', { length: 255 }).notNull().unique(), // Now globally unique
     passwordHash: text('password_hash').notNull(),
     role: varchar('role', { length: 50 }).notNull().default('user'),
+    emailVerified: boolean('email_verified').notNull().default(false),
     tokenVersion: integer('token_version').notNull().default(0),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
@@ -43,6 +44,28 @@ export const refreshTokens = pgTable(
   table => ({
     userIdx: index('refresh_tokens_user_idx').on(table.userId),
     hashIdx: index('refresh_tokens_hash_idx').on(table.tokenHash),
+  })
+)
+
+// Email tokens table for verification and password reset
+export const emailTokens = pgTable(
+  'email_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    type: varchar('type', { length: 50 }).notNull(), // 'email_verification' | 'password_reset'
+    expiresAt: timestamp('expires_at').notNull(),
+    usedAt: timestamp('used_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  table => ({
+    userIdx: index('email_tokens_user_idx').on(table.userId),
+    hashIdx: index('email_tokens_hash_idx').on(table.tokenHash),
+    typeIdx: index('email_tokens_type_idx').on(table.type),
+    expiresIdx: index('email_tokens_expires_idx').on(table.expiresAt),
   })
 )
 
@@ -111,6 +134,13 @@ export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
   }),
 }))
 
+export const emailTokensRelations = relations(emailTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [emailTokens.userId],
+    references: [users.id],
+  }),
+}))
+
 export const revokedJtiRelations = relations(revokedJti, ({ one }) => ({
   user: one(users, {
     fields: [revokedJti.userId],
@@ -128,4 +158,5 @@ export const auditRelations = relations(audit, ({ one }) => ({
 // User relations - simplified without tenant
 export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
+  emailTokens: many(emailTokens),
 }))

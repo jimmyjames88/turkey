@@ -12,11 +12,12 @@ A production-ready JWT authentication service with ES256 signing, JWKS support, 
 - **🔄 Refresh Token Rotation** - Automatic token rotation with replay attack protection
 - **🔑 JWKS Support** - Public key distribution via JSON Web Key Set
 - **🎯 App-Specific Tokens** - AppId-based JWT isolation for multi-application support
+- **📧 Email Integration** - Password reset & email verification with Mailgun or SMTP
 - **⚡ Rate Limiting & Brute Force Protection** - Comprehensive request throttling and account lockout
 - **🧹 Input Validation & Sanitization** - XSS protection with Zod schemas and DOMPurify
 - **📊 Standardized Error Handling** - Consistent error responses with detailed error codes
 - **🎯 Role-based Access Control** - User and admin role management
-- **🧪 100% Test Coverage** - Comprehensive integration test suite (35/35 tests passing)
+- **🧪 Comprehensive Test Coverage** - Full integration test suite for all features
 
 ## 🦃 Turkey SDK
 
@@ -309,6 +310,139 @@ Revoke all refresh tokens for user (logout from all devices).
 
 **Note:** This increments the user's token version, invalidating all existing access tokens.
 
+---
+
+## 📧 Email Integration Endpoints
+
+### POST /v1/auth/request-password-reset
+
+Request a password reset email.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "message": "If an account exists with that email, a password reset link has been sent"
+}
+```
+
+**Security Features:**
+
+- Email enumeration prevention (always returns success)
+- Rate limited: 3 requests per hour per user + general IP rate limits
+- Tokens expire after 1 hour (configurable via `PASSWORD_RESET_TOKEN_TTL`)
+- Single-use tokens
+
+---
+
+### POST /v1/auth/reset-password
+
+Complete password reset using token from email.
+
+**Request Body:**
+
+```json
+{
+  "token": "token-from-email",
+  "newPassword": "NewSecure123!"
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "message": "Password reset successful"
+}
+```
+
+**Error Responses:**
+
+- `400` - Invalid or expired token
+- `400` - Weak password (must meet password requirements)
+
+**Security Features:**
+
+- Token validation with single-use enforcement
+- Password strength validation
+- Revokes all refresh tokens and increments token version
+
+---
+
+### POST /v1/auth/verify-email
+
+Verify email address using token from email.
+
+**Request Body:**
+
+```json
+{
+  "token": "token-from-email"
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "message": "Email verified successfully!",
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "emailVerified": true
+  }
+}
+```
+
+**Error Responses:**
+
+- `400` - Invalid or expired verification token
+
+**Security Features:**
+
+- Token validation with single-use enforcement
+- Sends welcome email after successful verification
+- Tokens expire after 48 hours (configurable via `EMAIL_VERIFICATION_TOKEN_TTL`)
+
+---
+
+### POST /v1/auth/resend-verification
+
+Resend email verification link.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "message": "If your email is not verified, a new verification link has been sent."
+}
+```
+
+**Security Features:**
+
+- Email enumeration prevention (always returns success)
+- Rate limited (reuses login rate limit: 5 per 15 min)
+- Maximum 3 verification emails per hour per user
+- No-op if email already verified
+
+---
+
 ## 👤 User Management Endpoints
 
 ### GET /v1/users/me
@@ -589,6 +723,30 @@ REFRESH_TOKEN_TTL=7776000   # 90 days
 # Security
 BCRYPT_ROUNDS=12
 
+# Email Service Configuration (optional)
+EMAIL_SERVICE=mailgun|smtp           # Leave unset to disable email features
+EMAIL_FROM=noreply@yourdomain.com
+EMAIL_FROM_NAME="TurKey Auth"        # Optional sender name
+
+# Mailgun Configuration (if EMAIL_SERVICE=mailgun)
+MAILGUN_API_KEY=your-mailgun-api-key
+MAILGUN_DOMAIN=your-domain.mailgun.org
+
+# SMTP Configuration (if EMAIL_SERVICE=smtp)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false                    # true for port 465, false for other ports
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+
+# Email Feature Configuration (optional - has defaults)
+PASSWORD_RESET_TOKEN_TTL=3600        # 1 hour in seconds
+EMAIL_VERIFICATION_TOKEN_TTL=172800  # 48 hours in seconds
+REQUIRE_EMAIL_VERIFICATION=false     # Set to true to require email verification before login
+
+# Service API Key (optional - for backend-to-backend endpoints)
+TURKEY_SERVICE_API_KEY=your-secret-api-key-here
+
 # Rate Limiting (optional - has defaults)
 LOGIN_RATE_LIMIT_WINDOW_MS=900000      # 15 minutes
 LOGIN_RATE_LIMIT_MAX_ATTEMPTS=5
@@ -598,6 +756,62 @@ REFRESH_RATE_LIMIT_MAX_ATTEMPTS=10
 # CORS (optional)
 ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 ```
+
+### Email Service Setup
+
+TurKey supports **two email providers** out of the box:
+
+#### Option 1: Mailgun
+
+1. Sign up at [mailgun.com](https://www.mailgun.com)
+2. Get your API key and domain from the dashboard
+3. Configure environment variables:
+
+```bash
+EMAIL_SERVICE=mailgun
+MAILGUN_API_KEY=your-api-key
+MAILGUN_DOMAIN=sandbox123.mailgun.org
+EMAIL_FROM=noreply@yourdomain.com
+```
+
+#### Option 2: SMTP
+
+Use any SMTP provider (Gmail, SendGrid, AWS SES, etc.):
+
+```bash
+EMAIL_SERVICE=smtp
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password  # For Gmail, use App Password
+EMAIL_FROM=noreply@yourdomain.com
+```
+
+**Gmail Setup:**
+
+1. Enable 2FA on your Google account
+2. Generate an App Password: https://myaccount.google.com/apppasswords
+3. Use the app password in `SMTP_PASSWORD`
+
+#### Option 3: Disable Email
+
+Simply don't set `EMAIL_SERVICE`. Email-dependent features will:
+
+- Log warnings but not fail
+- Password reset/verification endpoints still work (for testing)
+- No actual emails sent
+
+### Email Features
+
+When email is configured, TurKey provides:
+
+- **Password Reset** - Users receive secure reset links via email
+- **Email Verification** - New users receive verification links (optional requirement)
+- **Welcome Emails** - Sent after successful email verification
+- **Security** - All tokens are single-use with configurable expiration
+- **Rate Limiting** - Prevents abuse (3 password resets/hour, 3 verification emails/hour)
+- **Email Enumeration Prevention** - Endpoints don't reveal if email exists
 
 ## 🏗️ Architecture
 
@@ -642,7 +856,7 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourapp.com
 
 ## 🧪 Testing
 
-The API includes a comprehensive test suite with 35 integration tests covering:
+The API includes a comprehensive test suite with integration tests covering:
 
 - ✅ Basic API endpoints
 - ✅ Authentication flows
@@ -651,6 +865,13 @@ The API includes a comprehensive test suite with 35 integration tests covering:
 - ✅ Role-based access control
 - ✅ Token validation and refresh
 - ✅ App-specific JWT tokens
+- ✅ Email integration (password reset, verification, providers)
+
+Run tests:
+
+```bash
+npm run test:integration
+```
 
 ## 📝 License
 
