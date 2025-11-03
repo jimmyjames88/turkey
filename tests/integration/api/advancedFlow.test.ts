@@ -35,6 +35,7 @@ async function testAdvancedFlow() {
   const loginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: testUser.email,
     password: testUser.password,
+    appId: testUser.appId,
   })
   logTestResult(loginResult)
 
@@ -48,6 +49,7 @@ async function testAdvancedFlow() {
   console.log('3. Refreshing access token...')
   const refreshResult = await testEndpoint('/v1/auth/refresh', 'POST', {
     refreshToken: loginData?.refreshToken,
+    appId: testUser.appId,
   })
   logTestResult(refreshResult)
 
@@ -61,6 +63,7 @@ async function testAdvancedFlow() {
   console.log('4. Testing global logout...')
   const logoutAllResult = await testEndpoint('/v1/auth/logout-all', 'POST', {
     refreshToken: refreshData?.refreshToken,
+    appId: testUser.appId,
   })
   logTestResult(logoutAllResult)
 
@@ -72,6 +75,7 @@ async function testAdvancedFlow() {
   console.log('5. Testing refresh token after global logout (should fail)...')
   const postLogoutRefreshResult = await testEndpoint('/v1/auth/refresh', 'POST', {
     refreshToken: refreshData?.refreshToken,
+    appId: testUser.appId,
   })
 
   // This should fail
@@ -89,6 +93,7 @@ async function testAdvancedFlow() {
   const freshLoginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: testUser.email,
     password: testUser.password,
+    appId: testUser.appId,
   })
   logTestResult(freshLoginResult)
 

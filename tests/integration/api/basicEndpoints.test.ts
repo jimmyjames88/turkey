@@ -40,6 +40,7 @@ async function testBasicEndpoints() {
       testEndpoint('/v1/auth/login', 'POST', {
         email: testUser.email,
         password: testUser.password,
+        appId: testUser.appId,
       }),
   ]
 
@@ -61,12 +62,14 @@ async function testBasicEndpoints() {
     // Test refresh endpoint
     const refreshResult = await testEndpoint('/v1/auth/refresh', 'POST', {
       refreshToken,
+      appId: testUser.appId,
     })
     logTestResult(refreshResult)
 
     // Test logout
     const logoutResult = await testEndpoint('/v1/auth/logout', 'POST', {
       refreshToken,
+      appId: testUser.appId,
     })
     logTestResult(logoutResult)
   }

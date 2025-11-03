@@ -237,3 +237,261 @@ userCommands
       process.exit(1)
     }
   })
+
+// Update user role
+userCommands
+  .command('update-role')
+  .description("Update a user's role")
+  .argument('<email>', 'User email address')
+  .requiredOption('-r, --role <role>', 'New role (e.g., user, admin)')
+  .option('-y, --yes', 'Skip confirmation prompt')
+  .action(async (email: string, options: { role: string; yes?: boolean }) => {
+    try {
+      const { db } = await import('../../src/db')
+      const { users, audit } = await import('../../src/db/schema')
+      const { eq } = await import('drizzle-orm')
+
+      // Get user
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+
+      if (!user) {
+        console.error(`❌ User not found: ${email}`)
+        process.exit(1)
+      }
+
+      if (user.role === options.role) {
+        console.log(`ℹ️  User already has role: ${options.role}`)
+        process.exit(0)
+      }
+
+      if (!options.yes) {
+        console.log(`⚠️  You are about to change user role:`)
+        console.log(`   Email: ${email}`)
+        console.log(`   Current role: ${user.role}`)
+        console.log(`   New role: ${options.role}`)
+
+        const confirmed = await askConfirmation('\nAre you sure? (y/N): ')
+        if (!confirmed) {
+          console.log('❌ Operation cancelled.')
+          process.exit(0)
+        }
+      }
+
+      // Update role
+      await db.update(users).set({ role: options.role }).where(eq(users.id, user.id))
+
+      // Log to audit trail
+      await db.insert(audit).values({
+        userId: user.id,
+        actor: 'admin',
+        action: 'role_updated',
+        meta: JSON.stringify({ oldRole: user.role, newRole: options.role }),
+      })
+
+      console.log('✅ User role updated successfully')
+      console.log(`   Email: ${email}`)
+      console.log(`   Old role: ${user.role}`)
+      console.log(`   New role: ${options.role}`)
+
+      process.exit(0)
+    } catch (error) {
+      console.error(
+        '❌ Failed to update user role:',
+        error instanceof Error ? error.message : error
+      )
+      process.exit(1)
+    }
+  })
+
+// Reset user password (admin)
+userCommands
+  .command('reset-password')
+  .description("Reset a user's password (admin operation)")
+  .argument('<email>', 'User email address')
+  .requiredOption('-p, --password <password>', 'New password')
+  .option('-y, --yes', 'Skip confirmation prompt')
+  .action(async (email: string, options: { password: string; yes?: boolean }) => {
+    try {
+      const { db } = await import('../../src/db')
+      const { users, audit } = await import('../../src/db/schema')
+      const { eq } = await import('drizzle-orm')
+      const bcrypt = await import('bcryptjs')
+
+      // Get user
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+
+      if (!user) {
+        console.error(`❌ User not found: ${email}`)
+        process.exit(1)
+      }
+
+      if (!options.yes) {
+        console.log(`⚠️  You are about to reset password for: ${email}`)
+        console.log(`   This will invalidate all existing sessions.`)
+
+        const confirmed = await askConfirmation('\nAre you sure? (y/N): ')
+        if (!confirmed) {
+          console.log('❌ Operation cancelled.')
+          process.exit(0)
+        }
+      }
+
+      // Hash new password
+      const passwordHash = await bcrypt.hash(options.password, 12)
+
+      // Update password and increment token version (invalidates existing tokens)
+      await db
+        .update(users)
+        .set({
+          passwordHash,
+          tokenVersion: user.tokenVersion + 1,
+        })
+        .where(eq(users.id, user.id))
+
+      // Log to audit trail
+      await db.insert(audit).values({
+        userId: user.id,
+        actor: 'admin',
+        action: 'password_reset',
+        meta: JSON.stringify({ reason: 'admin_reset' }),
+      })
+
+      console.log('✅ Password reset successfully')
+      console.log(`   Email: ${email}`)
+      console.log(`   Token version incremented: ${user.tokenVersion} → ${user.tokenVersion + 1}`)
+      console.log(`   All existing sessions invalidated`)
+
+      process.exit(0)
+    } catch (error) {
+      console.error('❌ Failed to reset password:', error instanceof Error ? error.message : error)
+      process.exit(1)
+    }
+  })
+
+// Manually verify email
+userCommands
+  .command('verify-email')
+  .description("Manually verify a user's email address")
+  .argument('<email>', 'User email address')
+  .option('-y, --yes', 'Skip confirmation prompt')
+  .action(async (email: string, options: { yes?: boolean }) => {
+    try {
+      const { db } = await import('../../src/db')
+      const { users, audit } = await import('../../src/db/schema')
+      const { eq } = await import('drizzle-orm')
+
+      // Get user
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+
+      if (!user) {
+        console.error(`❌ User not found: ${email}`)
+        process.exit(1)
+      }
+
+      if (user.emailVerified) {
+        console.log(`ℹ️  Email already verified for: ${email}`)
+        process.exit(0)
+      }
+
+      if (!options.yes) {
+        console.log(`⚠️  You are about to manually verify email: ${email}`)
+
+        const confirmed = await askConfirmation('\nAre you sure? (y/N): ')
+        if (!confirmed) {
+          console.log('❌ Operation cancelled.')
+          process.exit(0)
+        }
+      }
+
+      // Mark email as verified
+      await db.update(users).set({ emailVerified: true }).where(eq(users.id, user.id))
+
+      // Log to audit trail
+      await db.insert(audit).values({
+        userId: user.id,
+        actor: 'admin',
+        action: 'email_verified',
+        meta: JSON.stringify({ method: 'manual' }),
+      })
+
+      console.log('✅ Email verified successfully')
+      console.log(`   Email: ${email}`)
+
+      process.exit(0)
+    } catch (error) {
+      console.error('❌ Failed to verify email:', error instanceof Error ? error.message : error)
+      process.exit(1)
+    }
+  })
+
+// Show user details
+userCommands
+  .command('show')
+  .description('Show detailed user information')
+  .argument('<email>', 'User email address')
+  .action(async (email: string) => {
+    try {
+      const { db } = await import('../../src/db')
+      const { users, refreshTokens } = await import('../../src/db/schema')
+      const { eq, and, isNull, gt, sql } = await import('drizzle-orm')
+
+      // Get user
+      const [user] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          role: users.role,
+          emailVerified: users.emailVerified,
+          tokenVersion: users.tokenVersion,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1)
+
+      if (!user) {
+        console.error(`❌ User not found: ${email}`)
+        process.exit(1)
+      }
+
+      // Get active sessions count
+      const now = new Date()
+      const [sessionCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(refreshTokens)
+        .where(
+          and(
+            eq(refreshTokens.userId, user.id),
+            isNull(refreshTokens.revokedAt),
+            gt(refreshTokens.expiresAt, now)
+          )
+        )
+
+      // Calculate account age
+      const accountAge = Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24))
+
+      console.log('\n👤 User Details:\n')
+      console.log(`📧 Email: ${user.email}`)
+      console.log(`🆔 ID: ${user.id}`)
+      console.log(`👔 Role: ${user.role}`)
+      console.log(`✉️  Email Verified: ${user.emailVerified ? '✅ Yes' : '❌ No'}`)
+      console.log(`🔢 Token Version: ${user.tokenVersion}`)
+      console.log(`📅 Created: ${user.createdAt.toLocaleString()} (${accountAge} days ago)`)
+      console.log(`🔓 Active Sessions: ${sessionCount.count}`)
+      console.log()
+
+      console.log('💡 Management Actions:')
+      console.log(`   • View sessions: gravy session list-active --user ${email}`)
+      console.log(`   • Change role: gravy user update-role ${email} --role <role>`)
+      console.log(`   • Reset password: gravy user reset-password ${email} --password <password>`)
+      console.log(`   • Revoke sessions: gravy session revoke-user ${email}`)
+
+      process.exit(0)
+    } catch (error) {
+      console.error(
+        '❌ Failed to show user details:',
+        error instanceof Error ? error.message : error
+      )
+      process.exit(1)
+    }
+  })

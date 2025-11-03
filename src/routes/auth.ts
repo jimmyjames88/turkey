@@ -50,7 +50,9 @@ const loginSchema = z.object({
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'App ID must contain only letters, numbers, underscores, and hyphens'
-    ),
+    )
+    .optional()
+    .default(config.jwt.audience), // Default to configured audience
 })
 
 const refreshSchema = z.object({
@@ -62,7 +64,9 @@ const refreshSchema = z.object({
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'App ID must contain only letters, numbers, underscores, and hyphens'
-    ),
+    )
+    .optional()
+    .default(config.jwt.audience), // Default to configured audience
 })
 
 const registerSchema = z.object({
@@ -76,7 +80,9 @@ const registerSchema = z.object({
     .regex(
       /^[a-zA-Z0-9_-]+$/,
       'App ID must contain only letters, numbers, underscores, and hyphens'
-    ),
+    )
+    .optional()
+    .default(config.jwt.audience), // Default to configured audience
 })
 
 const requestPasswordResetSchema = z.object({

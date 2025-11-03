@@ -24,7 +24,7 @@ async function testAppAudiences() {
       const loginData = {
         email: user.email,
         password: user.password,
-        audience: 'my_blog',
+        appId: 'my_blog',
       }
 
       const result = await testEndpoint('/v1/auth/login', 'POST', loginData)
@@ -59,14 +59,14 @@ async function testAppAudiences() {
       const photosLogin = await testEndpoint('/v1/auth/login', 'POST', {
         email: user.email,
         password: user.password,
-        audience: 'my_photos',
+        appId: 'my_photos',
       })
 
       // Login for finance app
       const financeLogin = await testEndpoint('/v1/auth/login', 'POST', {
         email: user.email,
         password: user.password,
-        audience: 'my_finance',
+        appId: 'my_finance',
       })
 
       if (photosLogin.success && financeLogin.success) {
@@ -147,7 +147,7 @@ async function testAppAudiences() {
       const result = await testEndpoint('/v1/auth/login', 'POST', {
         email: user.email,
         password: user.password,
-        audience: 'my blog', // Invalid: contains space
+        appId: 'my blog', // Invalid: contains space
       })
 
       // Should be rejected with 400
@@ -173,14 +173,14 @@ async function testAppAudiences() {
       const loginResult = await testEndpoint('/v1/auth/login', 'POST', {
         email: user.email,
         password: user.password,
-        audience: 'my_blog',
+        appId: 'my_blog',
       })
 
       if (loginResult.success && loginResult.data?.data?.refreshToken) {
         // Refresh with same audience
         const refreshResult = await testEndpoint('/v1/auth/refresh', 'POST', {
           refreshToken: loginResult.data.data.refreshToken,
-          audience: 'my_blog',
+          appId: 'my_blog',
         })
 
         if (refreshResult.success && refreshResult.data?.data?.accessToken) {
@@ -212,7 +212,7 @@ async function testAppAudiences() {
       const user = generateTestUser('finance_reg')
       const userData = {
         ...user,
-        audience: 'my_finance',
+        appId: 'my_finance',
       }
 
       const result = await testEndpoint('/v1/auth/register', 'POST', userData)
@@ -223,7 +223,7 @@ async function testAppAudiences() {
         const loginResult = await testEndpoint('/v1/auth/login', 'POST', {
           email: user.email,
           password: user.password,
-          audience: 'my_finance',
+          appId: 'my_finance',
         })
 
         if (loginResult.success && loginResult.data?.data?.accessToken) {

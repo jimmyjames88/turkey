@@ -81,7 +81,7 @@ export async function setupTestApps(): Promise<void> {
   console.log('Single app mode - no app setup needed')
 }
 
-export function generateTestUser(suffix: string = '') {
+export function generateTestUser(suffix: string = '', appId: string = 'test-app') {
   const timestamp = Date.now()
   const uniqueSuffix = suffix ? `${suffix}_${timestamp}` : timestamp.toString()
 
@@ -89,10 +89,11 @@ export function generateTestUser(suffix: string = '') {
     email: `test${uniqueSuffix}@example.com`,
     password: 'SecurePass123!',
     role: 'user',
+    appId,
   }
 }
 
-export function generateAdminUser(suffix: string = '') {
+export function generateAdminUser(suffix: string = '', appId: string = 'test-app') {
   const timestamp = Date.now()
   const uniqueSuffix = suffix ? `${suffix}_${timestamp}` : timestamp.toString()
 
@@ -100,5 +101,6 @@ export function generateAdminUser(suffix: string = '') {
     email: `admin${uniqueSuffix}@example.com`,
     password: 'AdminSecure123!',
     role: 'admin',
+    appId,
   }
 }

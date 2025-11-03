@@ -14,6 +14,7 @@ async function testEdgeCases() {
   const weakPasswordResult = await testEndpoint('/v1/auth/register', 'POST', {
     email: 'weak@example.com',
     password: '123', // Weak password
+    appId: 'test-app',
   })
 
   const weakPasswordSuccess = weakPasswordResult.status === 400
@@ -34,6 +35,7 @@ async function testEdgeCases() {
     email: 'duplicate-test@example.com',
     password: 'SecurePass123!',
     role: 'user',
+    appId: 'test-app',
   }
 
   await testEndpoint('/v1/auth/register', 'POST', testUser)
@@ -56,6 +58,7 @@ async function testEdgeCases() {
   const invalidLoginResult = await testEndpoint('/v1/auth/login', 'POST', {
     email: 'testbasic@example.com',
     password: 'WrongPassword123!',
+    appId: 'test-app',
   })
 
   const invalidLoginSuccess = invalidLoginResult.status === 401
@@ -72,6 +75,7 @@ async function testEdgeCases() {
   console.log('Testing invalid refresh token...')
   const invalidRefreshResult = await testEndpoint('/v1/auth/refresh', 'POST', {
     refreshToken: 'rt_invalid_token_here',
+    appId: 'test-app',
   })
 
   const invalidRefreshSuccess = invalidRefreshResult.status === 401
