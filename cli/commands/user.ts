@@ -29,18 +29,19 @@ userCommands
   .description('Create a new user')
   .requiredOption('-e, --email <email>', 'User email address')
   .requiredOption('-p, --password <password>', 'User password')
+  .requiredOption('-a, --app-id <appId>', 'App ID for the user')
   .option('-r, --role <role>', 'User role', 'user')
-  .action(async (options: { email: string; password: string; role: string }) => {
+  .action(async (options: { email: string; password: string; appId: string; role: string }) => {
     try {
-      // Check if user already exists
+      // Check if user already exists for this app
       const existingUser = await db
         .select()
         .from(users)
-        .where(eq(users.email, options.email))
+        .where(and(eq(users.email, options.email), eq(users.appId, options.appId)))
         .limit(1)
 
       if (existingUser.length > 0) {
-        console.error(`❌ User with email ${options.email} already exists`)
+        console.error(`❌ User with email ${options.email} already exists for app ${options.appId}`)
         process.exit(1)
       }
 
@@ -54,10 +55,12 @@ userCommands
           email: options.email,
           passwordHash,
           role: options.role,
+          appId: options.appId,
         })
         .returning({
           id: users.id,
           email: users.email,
+          appId: users.appId,
           role: users.role,
           createdAt: users.createdAt,
         })
@@ -65,6 +68,7 @@ userCommands
       console.log('✅ User created successfully:')
       console.log(`   ID: ${newUser.id}`)
       console.log(`   Email: ${newUser.email}`)
+      console.log(`   App ID: ${newUser.appId}`)
       console.log(`   Role: ${newUser.role}`)
       console.log(`   Created: ${newUser.createdAt.toLocaleDateString()}`)
 
@@ -80,16 +84,27 @@ userCommands
   .command('list')
   .description('List users')
   .option('-r, --role <role>', 'Filter by role')
+  .option('-a, --app-id <appId>', 'Filter by app ID')
   .option('-l, --limit <number>', 'Limit number of results', '50')
-  .action(async (options: { role?: string; limit: string }) => {
+  .action(async (options: { role?: string; appId?: string; limit: string }) => {
     try {
-      // Build where condition
-      const whereCondition = options.role ? eq(users.role, options.role) : undefined
+      // Build where conditions
+      const whereConditions = []
+      if (options.role) whereConditions.push(eq(users.role, options.role))
+      if (options.appId) whereConditions.push(eq(users.appId, options.appId))
+
+      const whereCondition =
+        whereConditions.length > 0
+          ? whereConditions.length === 1
+            ? whereConditions[0]
+            : and(...whereConditions)
+          : undefined
 
       const allUsers = await db
         .select({
           id: users.id,
           email: users.email,
+          appId: users.appId,
           role: users.role,
           createdAt: users.createdAt,
         })
@@ -105,7 +120,7 @@ userCommands
 
       console.log(`\n👥 Found ${allUsers.length} user(s):\n`)
       allUsers.forEach(user => {
-        console.log(`📧 ${user.email} (${user.role})`)
+        console.log(`📧 ${user.email} (${user.role}) - App: ${user.appId}`)
         console.log(`   ID: ${user.id}`)
         console.log(`   Created: ${user.createdAt.toLocaleDateString()}`)
         console.log()
@@ -177,66 +192,78 @@ userCommands
   .description('Find users by email address (supports partial matching)')
   .argument('<email>', 'Email address or partial email to search for')
   .option('-r, --role <role>', 'Filter by role')
+  .option('-a, --app-id <appId>', 'Filter by app ID')
   .option('-e, --exact', 'Exact email match only (no partial matching)')
-  .action(async (emailQuery: string, options: { role?: string; exact?: boolean }) => {
-    try {
-      // Build where conditions
-      const whereConditions = []
+  .action(
+    async (emailQuery: string, options: { role?: string; appId?: string; exact?: boolean }) => {
+      try {
+        // Build where conditions
+        const whereConditions = []
 
-      // Email condition - exact or partial match
-      if (options.exact) {
-        whereConditions.push(eq(users.email, emailQuery))
-      } else {
-        whereConditions.push(sql`${users.email} ILIKE ${`%${emailQuery}%`}`)
-      }
-
-      // Add role filter if specified
-      if (options.role) {
-        whereConditions.push(eq(users.role, options.role))
-      }
-
-      // Combine all conditions
-      const whereCondition =
-        whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0]
-
-      const foundUsers = await db
-        .select({
-          id: users.id,
-          email: users.email,
-          role: users.role,
-          createdAt: users.createdAt,
-        })
-        .from(users)
-        .where(whereCondition)
-        .orderBy(users.email)
-
-      if (foundUsers.length === 0) {
-        const searchType = options.exact ? 'exact' : 'partial'
-        console.log(`🔍 No users found with ${searchType} email match: "${emailQuery}"`)
-        if (options.role) {
-          console.log(`   with role: ${options.role}`)
+        // Email condition - exact or partial match
+        if (options.exact) {
+          whereConditions.push(eq(users.email, emailQuery))
+        } else {
+          whereConditions.push(sql`${users.email} ILIKE ${`%${emailQuery}%`}`)
         }
+
+        // Add role filter if specified
+        if (options.role) {
+          whereConditions.push(eq(users.role, options.role))
+        }
+
+        // Add app filter if specified
+        if (options.appId) {
+          whereConditions.push(eq(users.appId, options.appId))
+        }
+
+        // Combine all conditions
+        const whereCondition =
+          whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0]
+
+        const foundUsers = await db
+          .select({
+            id: users.id,
+            email: users.email,
+            appId: users.appId,
+            role: users.role,
+            createdAt: users.createdAt,
+          })
+          .from(users)
+          .where(whereCondition)
+          .orderBy(users.email)
+
+        if (foundUsers.length === 0) {
+          const searchType = options.exact ? 'exact' : 'partial'
+          console.log(`🔍 No users found with ${searchType} email match: "${emailQuery}"`)
+          if (options.role) {
+            console.log(`   with role: ${options.role}`)
+          }
+          if (options.appId) {
+            console.log(`   with app: ${options.appId}`)
+          }
+          process.exit(0)
+        }
+
+        const searchType = options.exact ? 'exact' : 'partial'
+        console.log(
+          `\n🎯 Found ${foundUsers.length} user(s) with ${searchType} email match: "${emailQuery}"\n`
+        )
+
+        foundUsers.forEach(user => {
+          console.log(`📧 ${user.email} (${user.role}) - App: ${user.appId}`)
+          console.log(`   ID: ${user.id}`)
+          console.log(`   Created: ${user.createdAt.toLocaleDateString()}`)
+          console.log()
+        })
+
         process.exit(0)
+      } catch (error) {
+        console.error('❌ Failed to find users:', error instanceof Error ? error.message : error)
+        process.exit(1)
       }
-
-      const searchType = options.exact ? 'exact' : 'partial'
-      console.log(
-        `\n🎯 Found ${foundUsers.length} user(s) with ${searchType} email match: "${emailQuery}"\n`
-      )
-
-      foundUsers.forEach(user => {
-        console.log(`📧 ${user.email} (${user.role})`)
-        console.log(`   ID: ${user.id}`)
-        console.log(`   Created: ${user.createdAt.toLocaleDateString()}`)
-        console.log()
-      })
-
-      process.exit(0)
-    } catch (error) {
-      console.error('❌ Failed to find users:', error instanceof Error ? error.message : error)
-      process.exit(1)
     }
-  })
+  )
 
 // Update user role
 userCommands
@@ -244,18 +271,23 @@ userCommands
   .description("Update a user's role")
   .argument('<email>', 'User email address')
   .requiredOption('-r, --role <role>', 'New role (e.g., user, admin)')
+  .requiredOption('-a, --app-id <appId>', 'App ID')
   .option('-y, --yes', 'Skip confirmation prompt')
-  .action(async (email: string, options: { role: string; yes?: boolean }) => {
+  .action(async (email: string, options: { role: string; appId: string; yes?: boolean }) => {
     try {
       const { db } = await import('../../src/db')
       const { users, audit } = await import('../../src/db/schema')
-      const { eq } = await import('drizzle-orm')
+      const { eq, and } = await import('drizzle-orm')
 
       // Get user
-      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.email, email), eq(users.appId, options.appId)))
+        .limit(1)
 
       if (!user) {
-        console.error(`❌ User not found: ${email}`)
+        console.error(`❌ User not found: ${email} in app ${options.appId}`)
         process.exit(1)
       }
 
@@ -267,6 +299,7 @@ userCommands
       if (!options.yes) {
         console.log(`⚠️  You are about to change user role:`)
         console.log(`   Email: ${email}`)
+        console.log(`   App ID: ${options.appId}`)
         console.log(`   Current role: ${user.role}`)
         console.log(`   New role: ${options.role}`)
 
@@ -290,6 +323,7 @@ userCommands
 
       console.log('✅ User role updated successfully')
       console.log(`   Email: ${email}`)
+      console.log(`   App ID: ${options.appId}`)
       console.log(`   Old role: ${user.role}`)
       console.log(`   New role: ${options.role}`)
 
@@ -309,24 +343,29 @@ userCommands
   .description("Reset a user's password (admin operation)")
   .argument('<email>', 'User email address')
   .requiredOption('-p, --password <password>', 'New password')
+  .requiredOption('-a, --app-id <appId>', 'App ID')
   .option('-y, --yes', 'Skip confirmation prompt')
-  .action(async (email: string, options: { password: string; yes?: boolean }) => {
+  .action(async (email: string, options: { password: string; appId: string; yes?: boolean }) => {
     try {
       const { db } = await import('../../src/db')
       const { users, audit } = await import('../../src/db/schema')
-      const { eq } = await import('drizzle-orm')
+      const { eq, and } = await import('drizzle-orm')
       const bcrypt = await import('bcryptjs')
 
       // Get user
-      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.email, email), eq(users.appId, options.appId)))
+        .limit(1)
 
       if (!user) {
-        console.error(`❌ User not found: ${email}`)
+        console.error(`❌ User not found: ${email} in app ${options.appId}`)
         process.exit(1)
       }
 
       if (!options.yes) {
-        console.log(`⚠️  You are about to reset password for: ${email}`)
+        console.log(`⚠️  You are about to reset password for: ${email} (${options.appId})`)
         console.log(`   This will invalidate all existing sessions.`)
 
         const confirmed = await askConfirmation('\nAre you sure? (y/N): ')
@@ -358,6 +397,7 @@ userCommands
 
       console.log('✅ Password reset successfully')
       console.log(`   Email: ${email}`)
+      console.log(`   App ID: ${options.appId}`)
       console.log(`   Token version incremented: ${user.tokenVersion} → ${user.tokenVersion + 1}`)
       console.log(`   All existing sessions invalidated`)
 
@@ -373,28 +413,33 @@ userCommands
   .command('verify-email')
   .description("Manually verify a user's email address")
   .argument('<email>', 'User email address')
+  .requiredOption('-a, --app-id <appId>', 'App ID')
   .option('-y, --yes', 'Skip confirmation prompt')
-  .action(async (email: string, options: { yes?: boolean }) => {
+  .action(async (email: string, options: { appId: string; yes?: boolean }) => {
     try {
       const { db } = await import('../../src/db')
       const { users, audit } = await import('../../src/db/schema')
-      const { eq } = await import('drizzle-orm')
+      const { eq, and } = await import('drizzle-orm')
 
       // Get user
-      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.email, email), eq(users.appId, options.appId)))
+        .limit(1)
 
       if (!user) {
-        console.error(`❌ User not found: ${email}`)
+        console.error(`❌ User not found: ${email} in app ${options.appId}`)
         process.exit(1)
       }
 
       if (user.emailVerified) {
-        console.log(`ℹ️  Email already verified for: ${email}`)
+        console.log(`ℹ️  Email already verified for: ${email} in app ${options.appId}`)
         process.exit(0)
       }
 
       if (!options.yes) {
-        console.log(`⚠️  You are about to manually verify email: ${email}`)
+        console.log(`⚠️  You are about to manually verify email: ${email} (${options.appId})`)
 
         const confirmed = await askConfirmation('\nAre you sure? (y/N): ')
         if (!confirmed) {
@@ -416,6 +461,7 @@ userCommands
 
       console.log('✅ Email verified successfully')
       console.log(`   Email: ${email}`)
+      console.log(`   App ID: ${options.appId}`)
 
       process.exit(0)
     } catch (error) {
@@ -429,7 +475,8 @@ userCommands
   .command('show')
   .description('Show detailed user information')
   .argument('<email>', 'User email address')
-  .action(async (email: string) => {
+  .requiredOption('-a, --app-id <appId>', 'App ID')
+  .action(async (email: string, options: { appId: string }) => {
     try {
       const { db } = await import('../../src/db')
       const { users, refreshTokens } = await import('../../src/db/schema')
@@ -440,17 +487,18 @@ userCommands
         .select({
           id: users.id,
           email: users.email,
+          appId: users.appId,
           role: users.role,
           emailVerified: users.emailVerified,
           tokenVersion: users.tokenVersion,
           createdAt: users.createdAt,
         })
         .from(users)
-        .where(eq(users.email, email))
+        .where(and(eq(users.email, email), eq(users.appId, options.appId)))
         .limit(1)
 
       if (!user) {
-        console.error(`❌ User not found: ${email}`)
+        console.error(`❌ User not found: ${email} in app ${options.appId}`)
         process.exit(1)
       }
 
@@ -473,7 +521,8 @@ userCommands
       console.log('\n👤 User Details:\n')
       console.log(`📧 Email: ${user.email}`)
       console.log(`🆔 ID: ${user.id}`)
-      console.log(`👔 Role: ${user.role}`)
+      console.log(`� App ID: ${user.appId}`)
+      console.log(`�👔 Role: ${user.role}`)
       console.log(`✉️  Email Verified: ${user.emailVerified ? '✅ Yes' : '❌ No'}`)
       console.log(`🔢 Token Version: ${user.tokenVersion}`)
       console.log(`📅 Created: ${user.createdAt.toLocaleString()} (${accountAge} days ago)`)
@@ -482,8 +531,12 @@ userCommands
 
       console.log('💡 Management Actions:')
       console.log(`   • View sessions: gravy session list-active --user ${email}`)
-      console.log(`   • Change role: gravy user update-role ${email} --role <role>`)
-      console.log(`   • Reset password: gravy user reset-password ${email} --password <password>`)
+      console.log(
+        `   • Change role: gravy user update-role ${email} --role <role> --app-id ${user.appId}`
+      )
+      console.log(
+        `   • Reset password: gravy user reset-password ${email} --password <password> --app-id ${user.appId}`
+      )
       console.log(`   • Revoke sessions: gravy session revoke-user ${email}`)
 
       process.exit(0)

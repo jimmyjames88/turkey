@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { db } from '@/db'
 import { users } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { verifyPassword, hashPassword, validatePassword } from '@/services/passwordService'
 import { createTokenPair } from '@/services/tokenService'
 import {
@@ -87,6 +87,16 @@ const registerSchema = z.object({
 
 const requestPasswordResetSchema = z.object({
   email: commonSchemas.email,
+  appId: z
+    .string()
+    .min(1, 'App ID cannot be empty')
+    .max(100, 'App ID too long')
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'App ID must contain only letters, numbers, underscores, and hyphens'
+    )
+    .optional()
+    .default(config.jwt.audience), // Default to configured audience
 })
 
 const resetPasswordSchema = z.object({
@@ -100,6 +110,16 @@ const verifyEmailSchema = z.object({
 
 const resendVerificationSchema = z.object({
   email: commonSchemas.email,
+  appId: z
+    .string()
+    .min(1, 'App ID cannot be empty')
+    .max(100, 'App ID too long')
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'App ID must contain only letters, numbers, underscores, and hyphens'
+    )
+    .optional()
+    .default(config.jwt.audience), // Default to configured audience
 })
 
 /**
@@ -114,8 +134,11 @@ router.post(
   asyncHandler(async (req, res) => {
     const { email, password, appId } = req.body
 
-    // Find user (no longer filtering by tenant)
-    const [user] = await db.select().from(users).where(eq(users.email, email))
+    // Find user by email AND appId (to support same email across different apps)
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email), eq(users.appId, appId)))
 
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
       // Record failed attempt
@@ -259,8 +282,11 @@ router.post(
       throw errorHelpers.weakPassword(passwordValidation.errors)
     }
 
-    // Check if user already exists
-    const [existingUser] = await db.select().from(users).where(eq(users.email, email))
+    // Check if user already exists (for this app)
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email), eq(users.appId, appId)))
 
     if (existingUser) {
       throw errorHelpers.userExists()
@@ -275,6 +301,7 @@ router.post(
         email,
         passwordHash,
         role,
+        appId,
       })
       .returning()
 
@@ -437,10 +464,13 @@ router.post(
   loginRateLimit, // Reuse login rate limit (5 per 15 min)
   validateRequest(requestPasswordResetSchema),
   asyncHandler(async (req, res) => {
-    const { email } = req.body
+    const { email, appId } = req.body
 
-    // Find user by email
-    const [user] = await db.select().from(users).where(eq(users.email, email))
+    // Find user by email AND appId
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email), eq(users.appId, appId)))
 
     // Always return success to prevent email enumeration
     // But only send email if user exists
@@ -589,10 +619,13 @@ router.post(
   loginRateLimit, // Reuse login rate limit (5 per 15 min)
   validateRequest(resendVerificationSchema),
   asyncHandler(async (req, res) => {
-    const { email } = req.body
+    const { email, appId } = req.body
 
-    // Find user by email
-    const [user] = await db.select().from(users).where(eq(users.email, email))
+    // Find user by email AND appId
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email), eq(users.appId, appId)))
 
     // Always return success to prevent email enumeration
     if (user) {

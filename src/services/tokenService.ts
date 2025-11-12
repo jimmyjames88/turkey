@@ -45,6 +45,7 @@ export async function createAccessToken(
     aud: tokenAudience,
     sub: user.id,
     email: user.email, // Add email to payload
+    appId: user.appId, // Add appId to payload for app-specific identification
     role: user.role,
     scope: scope || '',
     jti,

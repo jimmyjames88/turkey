@@ -1,5 +1,6 @@
 export interface User {
   id: string
+  appId: string
   email: string
   passwordHash: string
   role: string

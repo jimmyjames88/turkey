@@ -7,6 +7,7 @@ import {
   integer,
   boolean,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -15,7 +16,8 @@ export const users = pgTable(
   'users',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    email: varchar('email', { length: 255 }).notNull().unique(), // Now globally unique
+    appId: varchar('app_id', { length: 100 }).notNull(),
+    email: varchar('email', { length: 255 }).notNull(),
     passwordHash: text('password_hash').notNull(),
     role: varchar('role', { length: 50 }).notNull().default('user'),
     emailVerified: boolean('email_verified').notNull().default(false),
@@ -23,7 +25,9 @@ export const users = pgTable(
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   table => ({
-    emailIdx: index('users_email_idx').on(table.email),
+    // Composite unique constraint: email is unique within an app
+    emailAppIdx: uniqueIndex('users_email_app_idx').on(table.email, table.appId),
+    appIdx: index('users_app_idx').on(table.appId),
   })
 )
 
@@ -96,12 +100,14 @@ export const revokedJti = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    appId: varchar('app_id', { length: 100 }).notNull(),
     reason: varchar('reason', { length: 100 }).notNull(),
     expiresAt: timestamp('expires_at').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   table => ({
     userIdx: index('revoked_jti_user_idx').on(table.userId),
+    appIdx: index('revoked_jti_app_idx').on(table.appId),
     expiresIdx: index('revoked_jti_expires_idx').on(table.expiresAt),
   })
 )

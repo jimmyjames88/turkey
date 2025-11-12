@@ -42,6 +42,7 @@ devCommands
       if (existingAdmin.length === 0) {
         console.log('   No admin user found. Creating default admin...')
         const bcrypt = await import('bcryptjs')
+        const config = await import('../../src/config')
 
         const defaultPassword = 'admin123'
         const passwordHash = await bcrypt.hash(defaultPassword, 12)
@@ -52,6 +53,7 @@ devCommands
             email: 'admin@turkey.local',
             passwordHash,
             role: 'admin',
+            appId: config.default.jwt.audience, // Use default appId from config
           })
           .returning({
             id: users.id,
@@ -60,6 +62,7 @@ devCommands
 
         console.log(`   ✅ Admin user created: ${newAdmin.email}`)
         console.log(`   🔑 Password: ${defaultPassword}`)
+        console.log(`   📱 App ID: ${config.default.jwt.audience}`)
         console.log('   ⚠️  Please change this password in production!\n')
       } else {
         console.log('   ✅ Admin user already exists\n')
@@ -85,17 +88,25 @@ devCommands
   .option('-e, --email <email>', 'User email', 'test@example.com')
   .option('-p, --password <password>', 'User password', 'test123')
   .option('-r, --role <role>', 'User role', 'user')
-  .action(async (options: { email: string; password: string; role: string }) => {
+  .option('-a, --app-id <appId>', 'App ID (defaults to config audience)')
+  .action(async (options: { email: string; password: string; role: string; appId?: string }) => {
     try {
       const { db } = await import('../../src/db')
       const { users } = await import('../../src/db/schema')
-      const { eq } = await import('drizzle-orm')
+      const { eq, and } = await import('drizzle-orm')
       const bcrypt = await import('bcryptjs')
+      const config = await import('../../src/config')
 
-      // Check if user exists
-      const existing = await db.select().from(users).where(eq(users.email, options.email)).limit(1)
+      const appId = options.appId || config.default.jwt.audience
+
+      // Check if user exists for this app
+      const existing = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.email, options.email), eq(users.appId, appId)))
+        .limit(1)
       if (existing.length > 0) {
-        console.log(`⚠️  User ${options.email} already exists`)
+        console.log(`⚠️  User ${options.email} already exists for app ${appId}`)
         return
       }
 
@@ -108,10 +119,12 @@ devCommands
           email: options.email,
           passwordHash,
           role: options.role,
+          appId,
         })
         .returning({
           id: users.id,
           email: users.email,
+          appId: users.appId,
           role: users.role,
         })
 
@@ -119,6 +132,7 @@ devCommands
       console.log(`   📧 Email: ${newUser.email}`)
       console.log(`   🔑 Password: ${options.password}`)
       console.log(`   👤 Role: ${newUser.role}`)
+      console.log(`   📱 App ID: ${newUser.appId}`)
       console.log(`   🆔 ID: ${newUser.id}`)
 
       process.exit(0)

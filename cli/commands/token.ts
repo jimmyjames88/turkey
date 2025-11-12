@@ -130,13 +130,14 @@ tokenCommands
   .description('Revoke an access token by adding its JTI to the denylist')
   .argument('<jti>', 'JWT ID (jti) to revoke')
   .requiredOption('-u, --user-id <userId>', 'User ID associated with the token')
+  .requiredOption('-a, --app-id <appId>', 'App ID associated with the token')
   .requiredOption('-e, --expires <date>', 'Token expiration date (ISO format)')
   .option('-r, --reason <reason>', 'Reason for revocation', 'admin_revoked')
   .option('-y, --yes', 'Skip confirmation prompt')
   .action(
     async (
       jti: string,
-      options: { userId: string; expires: string; reason: string; yes?: boolean }
+      options: { userId: string; appId: string; expires: string; reason: string; yes?: boolean }
     ) => {
       try {
         const { db } = await import('../../src/db')
@@ -175,6 +176,7 @@ tokenCommands
           console.log(`⚠️  You are about to revoke access token:`)
           console.log(`   JTI: ${jti}`)
           console.log(`   User: ${user?.email || options.userId}`)
+          console.log(`   App ID: ${options.appId}`)
           console.log(`   Expires: ${expiresAt.toLocaleString()}`)
           console.log(`   Reason: ${options.reason}`)
 
@@ -199,6 +201,7 @@ tokenCommands
         await db.insert(revokedJti).values({
           jti,
           userId: options.userId,
+          appId: options.appId,
           reason: options.reason,
           expiresAt,
         })

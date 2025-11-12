@@ -303,3 +303,23 @@ dbCommands
       process.exit(1)
     }
   })
+
+// Cleanup expired tokens
+dbCommands
+  .command('cleanup')
+  .description('Clean up expired revoked JTI entries from database')
+  .action(async () => {
+    try {
+      console.log('🧹 Cleaning up expired revoked tokens...')
+
+      const { revocationService } = await import('../../src/services/revocationService')
+
+      const deletedCount = await revocationService.cleanupExpired()
+
+      console.log(`✅ Cleaned up ${deletedCount} expired revoked token(s)`)
+      process.exit(0)
+    } catch (error) {
+      console.error('❌ Cleanup failed:', error instanceof Error ? error.message : error)
+      process.exit(1)
+    }
+  })

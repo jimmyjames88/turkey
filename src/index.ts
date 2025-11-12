@@ -9,6 +9,7 @@ import authRoutes from './routes/auth'
 import wellKnownRoutes from './routes/wellKnown'
 import userRoutes from './routes/users'
 import { initializeKeyManagement } from './services/keyService'
+import { cleanupJobService } from './services/cleanupJobService'
 import { testDatabaseConnection, closeDatabaseConnection, db } from './db'
 import { generalRateLimit } from './middleware/rateLimiting'
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandling'
@@ -102,6 +103,10 @@ async function startServer() {
       }
     }
 
+    // Start cleanup job
+    logger.info('Starting cleanup job...')
+    cleanupJobService.start()
+
     const server = app.listen(PORT, () => {
       logger.info(`🦃 TurKey Auth API running on port ${PORT}`)
       logger.info(`Environment: ${config.nodeEnv}`)
@@ -132,6 +137,9 @@ async function startServer() {
 // Graceful shutdown function
 async function gracefulShutdown(server: Server) {
   logger.info('Starting graceful shutdown...')
+
+  // Stop cleanup job
+  cleanupJobService.stop()
 
   server.close(async () => {
     logger.info('HTTP server closed')
