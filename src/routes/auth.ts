@@ -199,6 +199,12 @@ router.post(
       throw errorHelpers.invalidGrant('User not found')
     }
 
+    // Validate that the user's appId matches the requested appId
+    // This prevents refresh tokens from being used across different apps
+    if (user.appId !== appId) {
+      throw errorHelpers.invalidGrant('Invalid app context for refresh token')
+    }
+
     // Create new token pair with app-specific audience
     const newTokenPair = await createTokenPair(user, '', appId)
 
